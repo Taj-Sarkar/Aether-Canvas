@@ -684,8 +684,26 @@ Back: [answer]
                               <Icons.Bot size={12} /> Aether Agent
                             </div>
                           )}
-                          <div className="msg-bubble" dangerouslySetInnerHTML={{ __html: msg.content.replace(/\\n/g, '<br/>').replace(/\\*\\*(.*?)\\*\\*/g, '<b>$1</b>') }} />
-           </div>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', width: '100%' }}>
+                            <div className="msg-bubble" style={{ flex: 1 }} dangerouslySetInnerHTML={{ __html: msg.content.replace(/\\n/g, '<br/>').replace(/\\*\\*(.*?)\\*\\*/g, '<b>$1</b>') }} />
+                            {msg.role === 'model' && (
+                              <div 
+                                onClick={() => handlePinMessage(msg)}
+                                style={{ 
+                                  cursor: 'pointer', 
+                                  padding: '4px',
+                                  color: 'var(--app-text-muted)',
+                                  transition: 'color 0.2s'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.color = 'var(--app-accent-secondary)'}
+                                onMouseLeave={(e) => e.currentTarget.style.color = 'var(--app-text-muted)'}
+                                title="Pin to notes"
+                              >
+                                <Icons.Pin size={14} />
+                              </div>
+                            )}
+                          </div>
+                       </div>
                     ))}
                  </div>
                  <div className="input-area">
@@ -846,6 +864,13 @@ Back: [answer]
            {/* FLASHCARDS TAB */}
            {activeTab === 'flashcards' && (
               <div className="tab-content">
+                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', paddingBottom: '12px', borderBottom: '1px solid var(--app-panel-border)' }}>
+                    <h3 style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--app-text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Flashcards</h3>
+                    <button className="btn btn-primary" onClick={handleGenerateFlashcards} style={{ padding: '6px 12px', fontSize: '0.8rem' }}>
+                       <Icons.Plus size={14}/> Generate
+                    </button>
+                 </div>
+                 
                  {flashcards.length === 0 ? (
                     <div className="empty-state">
                        <Icons.FileText size={48} className="empty-state-icon"/>
