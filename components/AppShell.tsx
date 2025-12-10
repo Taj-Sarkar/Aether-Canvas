@@ -476,7 +476,10 @@ Image_prompt: [description]
       
       {/* 1. Left Sidebar */}
       <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col border-r border-slate-800 hidden md:flex">
-        <div className="p-4 flex items-center gap-2 text-white font-bold border-b border-slate-800">
+        <div 
+          onClick={onLogout}
+          className="p-4 flex items-center gap-2 text-white font-bold border-b border-slate-800 cursor-pointer hover:bg-slate-800/50 transition-colors"
+        >
           <div className="bg-indigo-600 p-1.5 rounded-lg"><Icons.Brain size={18} /></div>
           Aether Canvas
         </div>
@@ -721,38 +724,12 @@ Image_prompt: [description]
                                   <div dangerouslySetInnerHTML={{ __html: msg.content.replace(/\n/g, '<br/>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>') }} />
                                 </div>
                                 <div className="flex flex-col gap-1">
-                                  {msg.role === 'model' && (
-                                    <button
-                                      onClick={async () => {
-                                        // Extract a visual concept from the message
-                                        const visualPrompt = `A clear, educational illustration showing: ${msg.content.slice(0, 200)}`;
-                                        try {
-                                          const imageUrl = await generateImage(visualPrompt);
-                                          // Add as image block to workspace
-                                          const newBlock: ImageBlock = {
-                                            id: Date.now().toString(),
-                                            type: BlockType.IMAGE,
-                                            title: 'Generated Concept Visual',
-                                            src: imageUrl,
-                                            mimeType: 'image/png',
-                                          };
-                                          setWorkspaceSlice(data => ({ ...data, blocks: [...data.blocks, newBlock] }));
-                                        } catch (e: any) {
-                                          alert(`Failed to generate image: ${e?.message || 'Unknown error'}`);
-                                        }
-                                      }}
-                                      className="text-[11px] px-2 py-1 rounded-md transition-colors text-purple-600 hover:bg-purple-50 border border-purple-200"
-                                      title="Generate visual for this concept"
-                                    >
-                                      🎨 Visual
-                                    </button>
-                                  )}
                                   <button
                                     onClick={() => handlePinMessage(msg)}
-                                    className={`text-[11px] px-2 py-1 rounded-md transition-colors ${msg.role === 'user' ? 'text-indigo-100 hover:bg-indigo-500/40' : 'text-slate-400 hover:bg-slate-100'}`}
+                                    className={`p-1.5 rounded-md transition-colors ${msg.role === 'user' ? 'text-indigo-100 hover:bg-indigo-500/40' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'}`}
                                     title="Pin to notes"
                                   >
-                                    Pin
+                                    <Icons.Pin size={14} />
                                   </button>
                                 </div>
                               </div>

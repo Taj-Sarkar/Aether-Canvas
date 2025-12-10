@@ -22,7 +22,8 @@ import {
   Sparkles,
   Database,
   AlertTriangle,
-  Trash
+  Trash,
+  Pin
 } from 'lucide-react';
 
 export const Icons = {
@@ -48,5 +49,6 @@ export const Icons = {
   Sparkles,
   Database,
   AlertTriangle,
-  Trash
+  Trash,
+  Pin
 };
