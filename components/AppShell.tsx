@@ -358,7 +358,6 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
 Format each flashcard as:
 Front: [Clear question, cue, or fill-in-the-blank]
 Back: [Concise answer with optional tiny explanation/example]
-Image_prompt: [Concrete, helpful illustration idea]
 
 Content to analyze:
 ${context}
@@ -367,7 +366,6 @@ Return ONLY the flashcards in this exact format (one flashcard per block):
 ---
 Front: [question]
 Back: [answer]
-Image_prompt: [description]
 ---`;
 
     try {
@@ -379,15 +377,13 @@ Image_prompt: [description]
       
       flashcardBlocks.forEach((block, idx) => {
         const frontMatch = block.match(/Front:\s*(.+?)(?:\n|Back:)/s);
-        const backMatch = block.match(/Back:\s*(.+?)(?:\n|Image_prompt:)/s);
-        const imageMatch = block.match(/Image_prompt:\s*(.+?)(?:\n|$)/s);
+        const backMatch = block.match(/Back:\s*(.+?)(?:\n|$)/s);
         
         if (frontMatch && backMatch) {
           newFlashcards.push({
             id: `${Date.now()}-${idx}`,
             front: frontMatch[1].trim(),
             back: backMatch[1].trim(),
-            imagePrompt: imageMatch ? imageMatch[1].trim() : undefined,
           });
         }
       });
@@ -398,24 +394,6 @@ Image_prompt: [description]
           ...data, 
           flashcards: [...data.flashcards, ...newFlashcards] 
         }));
-
-        // Generate images for flashcards that have image prompts
-        newFlashcards.forEach(async (card, idx) => {
-          if (card.imagePrompt) {
-            try {
-              const imageUrl = await generateImage(card.imagePrompt);
-              setWorkspaceSlice(data => ({
-                ...data,
-                flashcards: data.flashcards.map(c => 
-                  c.id === card.id ? { ...c, imageUrl } : c
-                )
-              }));
-            } catch (e: any) {
-              console.error(`Failed to generate image for card ${idx + 1}:`, e);
-              // Continue without image - card will still be created
-            }
-          }
-        });
       } else {
         // Fallback: create a single flashcard from the response
         setWorkspaceSlice(data => ({ 
@@ -937,42 +915,6 @@ Image_prompt: [description]
                                     <div className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1">Back</div>
                                     <div className="text-sm text-slate-800">{card.back}</div>
                                  </div>
-                                 {card.imageUrl ? (
-                                    <div className="bg-green-50 border-l-4 border-green-400 p-3 rounded">
-                                       <div className="text-xs font-semibold text-green-700 uppercase tracking-wide mb-2">Visual Aid</div>
-                                       <img 
-                                         src={card.imageUrl} 
-                                         alt={card.imagePrompt || "Flashcard illustration"} 
-                                         className="w-full rounded-lg border border-slate-200 max-h-64 object-contain bg-white"
-                                       />
-                                       {card.imagePrompt && (
-                                          <div className="text-xs text-slate-600 italic mt-2">Prompt: {card.imagePrompt}</div>
-                                       )}
-                                    </div>
-                                 ) : card.imagePrompt ? (
-                                    <div className="bg-amber-50 border-l-4 border-amber-400 p-3 rounded">
-                                       <div className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1">Image Idea</div>
-                                       <div className="text-xs text-slate-700 italic mb-2">{card.imagePrompt}</div>
-                                       <button
-                                         onClick={async () => {
-                                           try {
-                                             const imageUrl = await generateImage(card.imagePrompt!);
-                                             setWorkspaceSlice(data => ({
-                                               ...data,
-                                               flashcards: data.flashcards.map(c => 
-                                                 c.id === card.id ? { ...c, imageUrl } : c
-                                               )
-                                             }));
-                                           } catch (e: any) {
-                                             alert(`Failed to generate image: ${e?.message || 'Unknown error'}`);
-                                           }
-                                         }}
-                                         className="text-xs px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded transition-colors"
-                                       >
-                                         Generate Image
-                                       </button>
-                                    </div>
-                                 ) : null}
                               </div>
                            </div>
                         ))}
