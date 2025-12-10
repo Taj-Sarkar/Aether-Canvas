@@ -21,7 +21,8 @@ import {
   MoreHorizontal,
   Sparkles,
   Database,
-  AlertTriangle
+  AlertTriangle,
+  Trash
 } from 'lucide-react';
 
 export const Icons = {
@@ -46,5 +47,6 @@ export const Icons = {
   MoreHorizontal,
   Sparkles,
   Database,
-  AlertTriangle
+  AlertTriangle,
+  Trash
 };

@@ -101,6 +101,23 @@ export const AppShell = () => {
     setBlocks([...blocks, newBlock]);
   };
 
+  const handleDeleteBlock = (id: string) => {
+    setBlocks(prev => prev.filter(b => b.id !== id));
+  };
+
+  const handleSaveLastResponseToNote = () => {
+    const lastModel = [...chatHistory].reverse().find(m => m.role === 'model');
+    if (!lastModel) return;
+    const newNote: TextBlock = {
+      id: Date.now().toString(),
+      type: BlockType.TEXT,
+      title: 'AI Note',
+      content: lastModel.content,
+    };
+    setBlocks(prev => [...prev, newNote]);
+    setActiveTab('chat');
+  };
+
   const handleAnalyzeText = async (block: TextBlock) => {
     resetAgents();
     setActiveTab('agents');
@@ -320,6 +337,13 @@ export const AppShell = () => {
                       <span className="text-sm font-medium">{block.title}</span>
                    </div>
                    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                      <button 
+                        onClick={() => handleDeleteBlock(block.id)} 
+                        className="p-1 hover:bg-slate-100 rounded text-slate-400"
+                        title="Delete note"
+                      >
+                        <Icons.Trash size={16}/>
+                      </button>
                       <button className="p-1 hover:bg-slate-100 rounded text-slate-400"><Icons.MoreHorizontal size={16}/></button>
                    </div>
                 </div>
@@ -444,7 +468,15 @@ export const AppShell = () => {
                          <Icons.Send size={16} />
                        </button>
                      </div>
-                     <p className="text-[10px] text-center text-slate-400 mt-2">Context aware of {blocks.length} blocks.</p>
+                     <div className="flex items-center justify-between mt-2 text-[11px] text-slate-500">
+                       <span className="text-slate-400">Context aware of {blocks.length} blocks.</span>
+                       <button 
+                         onClick={handleSaveLastResponseToNote}
+                         className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors text-[11px] font-medium"
+                       >
+                         <Icons.FileText size={12}/> Save last AI reply as note
+                       </button>
+                     </div>
                   </div>
                </div>
             )}
