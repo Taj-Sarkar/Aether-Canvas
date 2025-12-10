@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { GoogleGenAI, Type } from "@google/genai";
+import { getDb } from "@/lib/mongodb";
 
 const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
 
@@ -17,6 +18,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { action, payload } = body || {};
     const ai = ensureClient();
+    const db = await getDb();
 
     switch (action) {
       case "analyzeText": {
@@ -40,6 +42,16 @@ export async function POST(request: Request) {
           },
         });
         const result = JSON.parse(cleanText(response.text || "{}"));
+
+        if (db) {
+          db.collection("gemini_logs").insertOne({
+            action: "analyzeText",
+            createdAt: new Date(),
+            inputLength: (payload?.text || "").length,
+            output: result,
+          }).catch(() => {});
+        }
+
         return NextResponse.json(result);
       }
 
@@ -53,7 +65,19 @@ export async function POST(request: Request) {
             ],
           },
         });
-        return NextResponse.json({ text: response.text || "No analysis generated." });
+        const text = response.text || "No analysis generated.";
+
+        if (db) {
+          db.collection("gemini_logs").insertOne({
+            action: "analyzeImage",
+            createdAt: new Date(),
+            mimeType: payload?.mimeType,
+            prompt: payload?.prompt,
+            output: text,
+          }).catch(() => {});
+        }
+
+        return NextResponse.json({ text });
       }
 
       case "chartRecommendation": {
@@ -88,6 +112,16 @@ export async function POST(request: Request) {
           },
         });
         const result = JSON.parse(cleanText(response.text || "{}"));
+
+        if (db) {
+          db.collection("gemini_logs").insertOne({
+            action: "chartRecommendation",
+            createdAt: new Date(),
+            description: payload?.datasetDescription,
+            output: result,
+          }).catch(() => {});
+        }
+
         return NextResponse.json(result);
       }
 
@@ -105,7 +139,19 @@ export async function POST(request: Request) {
         });
 
         const response = await chat.sendMessage({ message: payload?.newMessage || "" });
-        return NextResponse.json({ text: response.text });
+        const text = response.text;
+
+        if (db) {
+          db.collection("chat_logs").insertOne({
+            createdAt: new Date(),
+            context: payload?.context,
+            history: payload?.history,
+            userMessage: payload?.newMessage,
+            modelResponse: text,
+          }).catch(() => {});
+        }
+
+        return NextResponse.json({ text });
       }
 
       default:

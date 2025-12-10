@@ -1,6 +1,7 @@
  'use client';
 import React from 'react';
 import { Icons } from './ui/Icons';
+import { AppView } from '../types';
 
 import type { AppView } from '../types';
 
@@ -13,12 +14,25 @@ interface AuthPageProps {
 export const AuthPage: React.FC<AuthPageProps> = ({ type, onNavigate, onAuthSuccess }) => {
   const isSignIn = type === 'signin';
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // Simulation of auth
-    setTimeout(() => {
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get("email");
+    const password = formData.get("password");
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      if (!res.ok) {
+        alert("Invalid credentials");
+        return;
+      }
       onAuthSuccess();
-    }, 800);
+    } catch {
+      alert("Login failed");
+    }
   };
 
   return (
@@ -40,18 +54,18 @@ export const AuthPage: React.FC<AuthPageProps> = ({ type, onNavigate, onAuthSucc
           {!isSignIn && (
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
-              <input type="text" className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="John Doe" required />
+              <input name="name" type="text" className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="John Doe" required />
             </div>
           )}
           
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-            <input type="email" className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="you@example.com" required />
+            <input name="email" type="email" className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="you@example.com" required />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
-            <input type="password" className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="••••••••" required />
+            <input name="password" type="password" className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="••••••••" required />
           </div>
 
           {!isSignIn && (

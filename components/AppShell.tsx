@@ -49,7 +49,11 @@ const WorkspaceItem = ({ name, active }: { name: string; active?: boolean }) => 
 
 // --- Main App Component ---
 
-export const AppShell = () => {
+interface AppShellProps {
+  onLogout?: () => void;
+}
+
+export const AppShell = ({ onLogout }: AppShellProps) => {
   // --- State ---
   const [activeTab, setActiveTab] = useState<'chat' | 'breakdown' | 'viz' | 'agents'>('chat');
   const [blocks, setBlocks] = useState<CanvasBlock[]>([
@@ -300,7 +304,13 @@ export const AppShell = () => {
         </div>
 
         <div className="p-4 border-t border-slate-800">
-          <button className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors">
+          <button
+            onClick={async () => {
+              try { await fetch("/api/auth/logout", { method: "POST" }); } catch {}
+              onLogout?.();
+            }}
+            className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors"
+          >
             <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center text-xs text-white">JD</div>
             John Doe
           </button>

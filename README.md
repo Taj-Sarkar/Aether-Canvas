@@ -17,3 +17,7 @@ View your app in AI Studio: https://ai.studio/apps/drive/16m5xKhtrHVm9qyTrxIzJvd
 3. Run the app: `npm run dev`
 
 This demo keeps Tailwind via CDN for simplicity; for production, add a local Tailwind config.
+
+### MongoDB
+- Add `MONGODB_URI` to `.env.local` to enable logging of chat/analysis calls.
+- Data is stored in collections `gemini_logs` and `chat_logs`.
