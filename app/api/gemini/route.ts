@@ -129,11 +129,12 @@ export async function POST(request: Request) {
         const chat = ai.chats.create({
           model: "gemini-2.5-flash",
           config: {
-            systemInstruction: `You are an AI assistant in a workspace. 
-            Here is the context of the current workspace (notes, images, datasets):
+            systemInstruction: `You are an AI assistant in a workspace.
+            You have workspace context (notes, images, datasets) when provided:
             ${payload?.context || ""}
-            
-            Answer the user's questions based on this context. Be concise and helpful.`,
+
+            Use the context when it is relevant, but if it is missing or unrelated
+            still answer the user's question as best you can. Be concise and helpful.`,
           },
           history: (payload?.history || []).map((h: any) => ({ role: h.role, parts: [{ text: h.content }] })),
         });

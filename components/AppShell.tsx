@@ -1,10 +1,10 @@
- 'use client';
-import React, { useState, useRef, useEffect, type ChangeEvent } from 'react';
+'use client';
+import React, { useState, type ChangeEvent } from 'react';
 import { Icons } from './ui/Icons';
 import { 
   AgentState, AgentType, AgentStatus, 
   CanvasBlock, BlockType, TextBlock, ImageBlock, DatasetBlock, 
-  BreakdownData, ChartConfig, Message 
+  BreakdownData, ChartConfig, Message, Workspace 
 } from '../types';
 import { analyzeTextStructure, analyzeImage, generateChartRecommendation, chatWithWorkspace, isApiConfigured } from '../services/geminiService';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area, PieChart, Pie, Cell } from 'recharts';
@@ -40,13 +40,6 @@ const AgentCard = ({ agent }: { agent: AgentState }) => {
   );
 };
 
-const WorkspaceItem = ({ name, active }: { name: string; active?: boolean }) => (
-  <div className={`flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer text-sm font-medium transition-colors ${active ? 'bg-slate-200 text-slate-900' : 'text-slate-600 hover:bg-slate-100'}`}>
-    <Icons.Layers size={16} />
-    {name}
-  </div>
-);
-
 // --- Main App Component ---
 
 interface AppShellProps {
@@ -65,6 +58,14 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
   const [chatInput, setChatInput] = useState('');
   const [breakdown, setBreakdown] = useState<BreakdownData | null>(null);
   const [visualizations, setVisualizations] = useState<ChartConfig[]>([]);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([
+    { id: 'ws-1', name: 'System Design', icon: 'layers', lastActive: new Date() },
+    { id: 'ws-2', name: 'Q4 Marketing', icon: 'layers', lastActive: new Date() },
+    { id: 'ws-3', name: 'Personal Notes', icon: 'layers', lastActive: new Date() },
+  ]);
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string>('ws-1');
+  const [workspaceMenuId, setWorkspaceMenuId] = useState<string | null>(null);
+  const [blockMenuId, setBlockMenuId] = useState<string | null>(null);
   
   // Agent States
   const [agents, setAgents] = useState<Record<string, AgentState>>({
@@ -81,6 +82,44 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
   const resetAgents = () => {
      Object.values(AgentType).forEach(t => updateAgent(t as AgentType, AgentStatus.IDLE));
   }
+
+  const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId) || workspaces[0];
+
+  const handleCreateWorkspace = () => {
+    const name = window.prompt('Workspace name?');
+    if (!name || !name.trim()) return;
+    const newWorkspace: Workspace = {
+      id: Date.now().toString(),
+      name: name.trim(),
+      icon: 'layers',
+      lastActive: new Date(),
+    };
+    setWorkspaces(prev => [...prev, newWorkspace]);
+    setActiveWorkspaceId(newWorkspace.id);
+  };
+
+  const handleRenameWorkspace = (id: string) => {
+    const ws = workspaces.find(w => w.id === id);
+    if (!ws) return;
+    const name = window.prompt('Rename workspace', ws.name);
+    if (name === null || !name.trim()) return;
+    setWorkspaces(prev => prev.map(w => (w.id === id ? { ...w, name: name.trim() } : w)));
+  };
+
+  const handleDeleteWorkspace = (id: string) => {
+    const ws = workspaces.find(w => w.id === id);
+    if (!ws) return;
+    if (workspaces.length <= 1) {
+      alert('Keep at least one workspace.');
+      return;
+    }
+    if (!window.confirm(`Delete workspace "${ws.name}"?`)) return;
+    const next = workspaces.filter(w => w.id !== id);
+    setWorkspaces(next);
+    if (activeWorkspaceId === id) {
+      setActiveWorkspaceId(next[0]?.id || '');
+    }
+  };
 
   // --- Handlers ---
 
@@ -226,6 +265,17 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
     }
   };
   
+  const handlePinMessage = (msg: Message) => {
+    const newNote: TextBlock = {
+      id: Date.now().toString(),
+      type: BlockType.TEXT,
+      title: 'Pinned message',
+      content: msg.content,
+    };
+    setBlocks(prev => [...prev, newNote]);
+    setActiveTab('chat');
+  };
+
   // Fake file upload handler
   const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -277,12 +327,50 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
         <div className="p-4 flex-1 overflow-y-auto space-y-6">
           <div>
             <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3 px-2">
-              Workspaces <Icons.Plus size={14} className="cursor-pointer hover:text-white" />
+              Workspaces
+              <button onClick={handleCreateWorkspace} className="p-1 rounded hover:text-white hover:bg-slate-800 transition-colors">
+                <Icons.Plus size={14} />
+              </button>
             </div>
             <div className="space-y-1">
-              <WorkspaceItem name="System Design" active />
-              <WorkspaceItem name="Q4 Marketing" />
-              <WorkspaceItem name="Personal Notes" />
+              {workspaces.map(ws => (
+                <div
+                  key={ws.id}
+                  className={`group flex items-center justify-between px-2 py-1.5 rounded-md text-sm transition-colors ${ws.id === activeWorkspaceId ? 'bg-slate-200 text-slate-900' : 'text-slate-400 hover:bg-slate-800/40 hover:text-white'}`}
+                >
+                  <button
+                    onClick={() => { setActiveWorkspaceId(ws.id); setWorkspaceMenuId(null); }}
+                    className="flex items-center gap-2 flex-1 text-left"
+                  >
+                    <Icons.Layers size={16} />
+                    <span className="truncate">{ws.name}</span>
+                  </button>
+                  <div className="relative">
+                    <button
+                      onClick={() => setWorkspaceMenuId(workspaceMenuId === ws.id ? null : ws.id)}
+                      className="p-1 rounded hover:bg-slate-800/60 text-slate-400 hover:text-white"
+                    >
+                      <Icons.MoreHorizontal size={14} />
+                    </button>
+                    {workspaceMenuId === ws.id && (
+                      <div className="absolute right-0 mt-1 w-32 bg-slate-800 border border-slate-700 rounded-lg shadow-lg text-xs overflow-hidden z-20">
+                        <button
+                          onClick={() => { setWorkspaceMenuId(null); handleRenameWorkspace(ws.id); }}
+                          className="w-full text-left px-3 py-2 hover:bg-slate-700 text-slate-200"
+                        >
+                          Rename
+                        </button>
+                        <button
+                          onClick={() => { setWorkspaceMenuId(null); handleDeleteWorkspace(ws.id); }}
+                          className="w-full text-left px-3 py-2 hover:bg-slate-700 text-red-300"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -318,7 +406,7 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
       <main className="flex-1 flex flex-col min-w-0 bg-slate-50 relative">
         <header className="h-16 border-b border-slate-200 bg-white flex items-center justify-between px-6 sticky top-0 z-10">
            <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-             System Design <span className="text-slate-400 text-sm font-normal">/ Q4 Rollout</span>
+             {activeWorkspace?.name || 'Workspace'}
            </h2>
            <div className="flex items-center gap-3">
              <label className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 hover:border-slate-300 transition-all">
@@ -344,16 +432,24 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
                       {block.type === BlockType.DATASET && <Icons.Database size={16}/>}
                       <span className="text-sm font-medium">{block.title}</span>
                    </div>
-                   <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                      <button 
-                        onClick={() => handleDeleteBlock(block.id)} 
-                        className="p-1 hover:bg-slate-100 rounded text-slate-400"
-                        title="Delete note"
-                      >
-                        <Icons.Trash size={16}/>
-                      </button>
-                      <button className="p-1 hover:bg-slate-100 rounded text-slate-400"><Icons.MoreHorizontal size={16}/></button>
-                   </div>
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity relative">
+                    <button
+                      onClick={() => setBlockMenuId(blockMenuId === block.id ? null : block.id)}
+                      className="p-1 hover:bg-slate-100 rounded text-slate-400"
+                    >
+                      <Icons.MoreHorizontal size={16}/>
+                    </button>
+                    {blockMenuId === block.id && (
+                      <div className="absolute right-0 mt-2 w-36 bg-white border border-slate-200 rounded-lg shadow-lg z-30">
+                        <button
+                          onClick={() => { setBlockMenuId(null); handleDeleteBlock(block.id); }}
+                          className="w-full flex items-center gap-2 text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                        >
+                          <Icons.Trash size={14}/> Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Block Content */}
@@ -453,9 +549,20 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
                   <div className="flex-1 overflow-y-auto p-4 space-y-4">
                      {chatHistory.map(msg => (
                         <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                           <div className={`max-w-[85%] p-3 rounded-xl text-sm leading-relaxed ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-white border border-slate-200 text-slate-800 rounded-bl-none shadow-sm'}`}>
-                              {msg.role === 'model' && <div className="text-[10px] text-slate-400 font-bold mb-1 uppercase tracking-wider">AI Assistant</div>}
-                              <div dangerouslySetInnerHTML={{ __html: msg.content.replace(/\n/g, '<br/>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>') }} />
+                           <div className={`group max-w-[85%] p-3 rounded-xl text-sm leading-relaxed relative ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-white border border-slate-200 text-slate-800 rounded-bl-none shadow-sm'}`}>
+                              <div className="flex items-start gap-2">
+                                <div className="flex-1">
+                                  {msg.role === 'model' && <div className="text-[10px] text-slate-400 font-bold mb-1 uppercase tracking-wider">AI Assistant</div>}
+                                  <div dangerouslySetInnerHTML={{ __html: msg.content.replace(/\n/g, '<br/>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>') }} />
+                                </div>
+                                <button
+                                  onClick={() => handlePinMessage(msg)}
+                                  className={`text-[11px] px-2 py-1 rounded-md transition-colors ${msg.role === 'user' ? 'text-indigo-100 hover:bg-indigo-500/40' : 'text-slate-400 hover:bg-slate-100'}`}
+                                  title="Pin to notes"
+                                >
+                                  Pin
+                                </button>
+                              </div>
                            </div>
                         </div>
                      ))}
