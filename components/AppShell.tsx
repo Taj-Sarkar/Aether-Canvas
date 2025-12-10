@@ -253,40 +253,43 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
      try {
        const isDataUrl = block.src.startsWith('data:');
        let base64 = '';
+       let description = '';
        
        if (isDataUrl) {
           base64 = block.src.split(',')[1];
        } else {
           if(block.src.includes('picsum')) {
              await new Promise(r => setTimeout(r, 1500));
-             const mockResponse = "The image appears to be a random landscape or abstract scene (placeholder). It contains natural colors and lighting.";
+             description = "The image appears to be a random landscape or abstract scene (placeholder). It contains natural colors and lighting.";
+             
+             // Update the block with analysis
              setWorkspaceSlice(data => ({
                ...data,
-               chatHistory: [...data.chatHistory, {
-                  id: Date.now().toString(),
-                  role: 'model',
-                  content: `**Vision Analysis:** ${mockResponse}`,
-                  timestamp: Date.now()
-               }]
+               blocks: data.blocks.map(b => 
+                 b.id === block.id 
+                   ? { ...b, analysis: description } as ImageBlock
+                   : b
+               )
              }));
+             
              updateAgent(AgentType.VISION, AgentStatus.COMPLETED);
-             setTimeout(() => setActiveTab('chat'), 1000);
              return;
           }
        }
 
-       const description = await analyzeImage(base64, block.mimeType, "Describe this image.");
+       description = await analyzeImage(base64, block.mimeType, "Describe this image in detail.");
+       
+       // Update the block with analysis
        setWorkspaceSlice(data => ({
          ...data,
-         chatHistory: [...data.chatHistory, {
-            id: Date.now().toString(),
-            role: 'model',
-            content: `**Vision Analysis:** ${description}`,
-            timestamp: Date.now()
-         }]
+         blocks: data.blocks.map(b => 
+           b.id === block.id 
+             ? { ...b, analysis: description } as ImageBlock
+             : b
+         )
        }));
+       
        updateAgent(AgentType.VISION, AgentStatus.COMPLETED);
-       setTimeout(() => setActiveTab('chat'), 1000);
      } catch (e) {
        updateAgent(AgentType.VISION, AgentStatus.ERROR);
      }
@@ -538,7 +541,7 @@ Back: [answer]
             <div className="avatar">JD</div>
             <div className="user-info">
               <div className="user-name">John Doe</div>
-              <div className="user-plan">Pro Plan</div>
+              
             </div>
             <div className="theme-toggle" onClick={toggleTheme} title="Toggle Theme">
               {theme === 'dark' ? <Icons.Moon size={16} /> : <Icons.Sun size={16} />}
@@ -620,10 +623,63 @@ Back: [answer]
                        <div style={{ borderRadius: '8px', overflow: 'hidden', background: 'var(--app-input-bg)', maxHeight: '400px', display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
                           <img src={(block as ImageBlock).src} alt="Block content" style={{ objectFit: 'contain', maxHeight: '100%' }} />
                        </div>
+                       
+                       {(block as ImageBlock).analysis && (
+                         <div style={{ 
+                           background: 'rgba(0, 219, 222, 0.08)', 
+                           border: '1px solid var(--app-accent-secondary)',
+                           borderRadius: '8px',
+                           padding: '16px',
+                           marginBottom: '16px'
+                         }}>
+                           <div style={{ 
+                             fontSize: '0.75rem', 
+                             fontWeight: 600, 
+                             color: 'var(--app-accent-secondary)', 
+                             textTransform: 'uppercase', 
+                             letterSpacing: '0.1em', 
+                             marginBottom: '8px',
+                             display: 'flex',
+                             alignItems: 'center',
+                             gap: '6px'
+                           }}>
+                             <Icons.Eye size={14} /> Vision Analysis
+                           </div>
+                           <div style={{ 
+                             fontSize: '0.9rem', 
+                             color: 'var(--app-text-main)', 
+                             lineHeight: '1.6' 
+                           }}>
+                             {(block as ImageBlock).analysis}
+                           </div>
+                         </div>
+                       )}
+                       
                        <div className="ai-actions">
                           <div className="ai-chip" onClick={() => handleAnalyzeImage(block as ImageBlock)}>
-                            <Icons.Eye size={12}/> Analyze
+                            <Icons.Eye size={12}/> {(block as ImageBlock).analysis ? 'Re-analyze' : 'Analyze'}
                           </div>
+                          {(block as ImageBlock).analysis && (
+                            <>
+                              <div className="ai-chip" onClick={() => {
+                                const analysisBlock: TextBlock = {
+                                  id: Date.now().toString(),
+                                  type: BlockType.TEXT,
+                                  title: `Analysis: ${block.title}`,
+                                  content: (block as ImageBlock).analysis || '',
+                                };
+                                handleAnalyzeText(analysisBlock);
+                              }}>
+                                <Icons.Sparkles size={12}/> Analyze & Organize
+                              </div>
+                              <div className="ai-chip" onClick={() => {
+                                const prompt = `Question about image "${block.title}": ${(block as ImageBlock).analysis}`;
+                                sendChat(prompt);
+                              }}>
+                                <Icons.MessageSquare size={12}/> Ask in chat
+                              </div>
+                            </>
+                          )}
                        </div>
                     </div>
                   )}
@@ -643,6 +699,23 @@ Back: [answer]
                        <div className="ai-actions">
                          <div className="ai-chip" onClick={() => handleRecommendCharts(block as DatasetBlock)}>
                            <Icons.BarChart size={12} /> Recommend Charts
+                         </div>
+                         <div className="ai-chip" onClick={() => {
+                           const datasetText: TextBlock = {
+                             id: Date.now().toString(),
+                             type: BlockType.TEXT,
+                             title: `Dataset Analysis: ${block.title}`,
+                             content: `Dataset: ${(block as DatasetBlock).fileName}\nRows: ${(block as DatasetBlock).rowCount}\nColumns: ${(block as DatasetBlock).columns.join(', ')}\nDescription: ${(block as DatasetBlock).description || 'No description'}`,
+                           };
+                           handleAnalyzeText(datasetText);
+                         }}>
+                           <Icons.Sparkles size={12} /> Analyze & Organize
+                         </div>
+                         <div className="ai-chip" onClick={() => {
+                           const prompt = `Question about dataset "${block.title}": ${(block as DatasetBlock).description || `File with ${(block as DatasetBlock).rowCount} rows and columns: ${(block as DatasetBlock).columns.join(', ')}`}`;
+                           sendChat(prompt);
+                         }}>
+                           <Icons.MessageSquare size={12} /> Ask in chat
                          </div>
                        </div>
                      </div>

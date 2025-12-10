@@ -40,6 +40,7 @@ export interface ImageBlock extends BaseBlock {
   type: BlockType.IMAGE;
   src: string; // Base64 or URL
   mimeType: string;
+  analysis?: string; // Vision analysis result
 }
 
 export interface DatasetBlock extends BaseBlock {
