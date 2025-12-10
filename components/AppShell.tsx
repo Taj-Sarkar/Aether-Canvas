@@ -49,15 +49,28 @@ interface AppShellProps {
 export const AppShell = ({ onLogout }: AppShellProps) => {
   // --- State ---
   const [activeTab, setActiveTab] = useState<'chat' | 'breakdown' | 'viz' | 'agents'>('chat');
-  const [blocks, setBlocks] = useState<CanvasBlock[]>([
-    { id: '1', type: BlockType.TEXT, title: 'Project Notes', content: 'Met with the team today regarding the Q4 rollout. \nIssues: \n- Server latency is high during peak hours.\n- The mobile login flow is confusing users.\nAction items:\n- Investigate Redis caching layer.\n- Redesign login UX.' },
-  ]);
-  const [chatHistory, setChatHistory] = useState<Message[]>([
-    { id: '0', role: 'model', content: 'Hello! I\'m ready to help you organize this workspace.', timestamp: Date.now() }
-  ]);
+  type WorkspaceData = {
+    blocks: CanvasBlock[];
+    chatHistory: Message[];
+    breakdown: BreakdownData | null;
+    visualizations: ChartConfig[];
+  };
+  const initialWorkspaceData: WorkspaceData = {
+    blocks: [
+      { id: '1', type: BlockType.TEXT, title: 'Project Notes', content: 'Met with the team today regarding the Q4 rollout. \nIssues: \n- Server latency is high during peak hours.\n- The mobile login flow is confusing users.\nAction items:\n- Investigate Redis caching layer.\n- Redesign login UX.' },
+    ],
+    chatHistory: [
+      { id: '0', role: 'model', content: 'Hello! I\'m ready to help you organize this workspace.', timestamp: Date.now() }
+    ],
+    breakdown: null,
+    visualizations: [],
+  };
+  const [workspaceData, setWorkspaceData] = useState<Record<string, WorkspaceData>>({
+    'ws-1': initialWorkspaceData,
+    'ws-2': { ...initialWorkspaceData, blocks: [{ id: '2', type: BlockType.TEXT, title: 'Marketing Ideas', content: 'Brainstorm campaign angles and Q4 promos.' }], chatHistory: [{ id: '0b', role: 'model', content: 'Let\'s plan your marketing ideas.', timestamp: Date.now() }], breakdown: null, visualizations: [] },
+    'ws-3': { ...initialWorkspaceData, blocks: [{ id: '3', type: BlockType.TEXT, title: 'Personal Notes', content: 'Daily notes and tasks.' }], chatHistory: [{ id: '0c', role: 'model', content: 'Personal workspace ready.', timestamp: Date.now() }], breakdown: null, visualizations: [] },
+  });
   const [chatInput, setChatInput] = useState('');
-  const [breakdown, setBreakdown] = useState<BreakdownData | null>(null);
-  const [visualizations, setVisualizations] = useState<ChartConfig[]>([]);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([
     { id: 'ws-1', name: 'System Design', icon: 'layers', lastActive: new Date() },
     { id: 'ws-2', name: 'Q4 Marketing', icon: 'layers', lastActive: new Date() },
@@ -84,6 +97,18 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
   }
 
   const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId) || workspaces[0];
+  const currentData = workspaceData[activeWorkspaceId] || initialWorkspaceData;
+  const blocks = currentData.blocks;
+  const chatHistory = currentData.chatHistory;
+  const breakdown = currentData.breakdown;
+  const visualizations = currentData.visualizations;
+
+  const setWorkspaceSlice = (updater: (data: WorkspaceData) => WorkspaceData) => {
+    setWorkspaceData(prev => ({
+      ...prev,
+      [activeWorkspaceId]: updater(prev[activeWorkspaceId] || initialWorkspaceData),
+    }));
+  };
 
   const handleCreateWorkspace = () => {
     const name = window.prompt('Workspace name?');
@@ -95,6 +120,15 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
       lastActive: new Date(),
     };
     setWorkspaces(prev => [...prev, newWorkspace]);
+    setWorkspaceData(prev => ({
+      ...prev,
+      [newWorkspace.id]: {
+        blocks: [],
+        chatHistory: [{ id: `${Date.now()}-greet`, role: 'model', content: 'New workspace ready. Add notes or ask anything.', timestamp: Date.now() }],
+        breakdown: null,
+        visualizations: [],
+      },
+    }));
     setActiveWorkspaceId(newWorkspace.id);
   };
 
@@ -142,15 +176,15 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
         (newBlock as DatasetBlock).description = 'Monthly sales data for North America region';
     }
 
-    setBlocks([...blocks, newBlock]);
+    setWorkspaceSlice(data => ({ ...data, blocks: [...data.blocks, newBlock] }));
   };
 
   const handleDeleteBlock = (id: string) => {
-    setBlocks(prev => prev.filter(b => b.id !== id));
+    setWorkspaceSlice(data => ({ ...data, blocks: data.blocks.filter(b => b.id !== id) }));
   };
 
   const handleSaveLastResponseToNote = () => {
-    const lastModel = [...chatHistory].reverse().find(m => m.role === 'model');
+    const lastModel = [...currentData.chatHistory].reverse().find(m => m.role === 'model');
     if (!lastModel) return;
     const newNote: TextBlock = {
       id: Date.now().toString(),
@@ -158,7 +192,7 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
       title: 'AI Note',
       content: lastModel.content,
     };
-    setBlocks(prev => [...prev, newNote]);
+    setWorkspaceSlice(data => ({ ...data, blocks: [...data.blocks, newNote] }));
     setActiveTab('chat');
   };
 
@@ -169,7 +203,7 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
     
     try {
       const result = await analyzeTextStructure(block.content);
-      setBreakdown(result);
+      setWorkspaceSlice(data => ({ ...data, breakdown: result }));
       updateAgent(AgentType.STRUCTURER, AgentStatus.COMPLETED);
       setTimeout(() => setActiveTab('breakdown'), 1000);
     } catch (e) {
@@ -200,12 +234,15 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
           if(block.src.includes('picsum')) {
              await new Promise(r => setTimeout(r, 1500)); // Fake delay
              const mockResponse = "The image appears to be a random landscape or abstract scene (placeholder). It contains natural colors and lighting.";
-             setChatHistory(prev => [...prev, {
-                id: Date.now().toString(),
-                role: 'model',
-                content: `**Vision Analysis:** ${mockResponse}`,
-                timestamp: Date.now()
-             }]);
+             setWorkspaceSlice(data => ({
+               ...data,
+               chatHistory: [...data.chatHistory, {
+                  id: Date.now().toString(),
+                  role: 'model',
+                  content: `**Vision Analysis:** ${mockResponse}`,
+                  timestamp: Date.now()
+               }]
+             }));
              updateAgent(AgentType.VISION, AgentStatus.COMPLETED);
              setTimeout(() => setActiveTab('chat'), 1000);
              return;
@@ -213,12 +250,15 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
        }
 
        const description = await analyzeImage(base64, block.mimeType, "Describe this image.");
-       setChatHistory(prev => [...prev, {
-          id: Date.now().toString(),
-          role: 'model',
-          content: `**Vision Analysis:** ${description}`,
-          timestamp: Date.now()
-       }]);
+       setWorkspaceSlice(data => ({
+         ...data,
+         chatHistory: [...data.chatHistory, {
+            id: Date.now().toString(),
+            role: 'model',
+            content: `**Vision Analysis:** ${description}`,
+            timestamp: Date.now()
+         }]
+       }));
        updateAgent(AgentType.VISION, AgentStatus.COMPLETED);
        setTimeout(() => setActiveTab('chat'), 1000);
      } catch (e) {
@@ -233,7 +273,7 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
 
       try {
         const config = await generateChartRecommendation(block.description || "Generic dataset");
-        setVisualizations(prev => [config, ...prev]);
+        setWorkspaceSlice(data => ({ ...data, visualizations: [config, ...data.visualizations] }));
         updateAgent(AgentType.DATA_VIZ, AgentStatus.COMPLETED);
         setTimeout(() => setActiveTab('viz'), 1000);
       } catch (e) {
@@ -241,28 +281,41 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
       }
   };
 
-  const handleChat = async () => {
-    if(!chatInput.trim()) return;
+  const sendChat = async (message: string) => {
+    if (!message.trim()) return;
 
-    const userMsg: Message = { id: Date.now().toString(), role: 'user', content: chatInput, timestamp: Date.now() };
-    setChatHistory(prev => [...prev, userMsg]);
+    const userMsg: Message = { id: Date.now().toString(), role: 'user', content: message, timestamp: Date.now() };
+    setWorkspaceSlice(data => ({ ...data, chatHistory: [...data.chatHistory, userMsg] }));
     setChatInput('');
     setActiveTab('chat'); // Force switch to chat
 
     // Context building
-    const context = blocks.map(b => {
+    const context = currentData.blocks.map(b => {
       if(b.type === BlockType.TEXT) return `Note (${b.title}): ${(b as TextBlock).content}`;
       if(b.type === BlockType.DATASET) return `Dataset (${b.title}): ${(b as DatasetBlock).description}`;
       return `Image (${b.title})`;
     }).join('\n');
 
     try {
-       const responseText = await chatWithWorkspace(chatHistory, chatInput, context);
+       const responseText = await chatWithWorkspace(currentData.chatHistory, message, context);
        const modelMsg: Message = { id: (Date.now()+1).toString(), role: 'model', content: responseText || "I couldn't generate a response.", timestamp: Date.now() };
-       setChatHistory(prev => [...prev, modelMsg]);
+       setWorkspaceSlice(data => ({ ...data, chatHistory: [...data.chatHistory, modelMsg] }));
     } catch(e) {
        console.error(e);
     }
+  };
+
+  const handleChat = async () => {
+    if(!chatInput.trim()) return;
+    await sendChat(chatInput);
+  };
+
+  const handleAskNote = async (block: TextBlock) => {
+    const lines = (block.content || '').split('\n').filter(Boolean);
+    const preview = lines.slice(0, 2).join(' ').trim();
+    const snippet = preview ? `${preview} ...` : '(empty note)';
+    const prompt = `Question about note "${block.title}": ${snippet}`;
+    await sendChat(prompt);
   };
   
   const handlePinMessage = (msg: Message) => {
@@ -272,7 +325,7 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
       title: 'Pinned message',
       content: msg.content,
     };
-    setBlocks(prev => [...prev, newNote]);
+    setWorkspaceSlice(data => ({ ...data, blocks: [...data.blocks, newNote] }));
     setActiveTab('chat');
   };
 
@@ -301,7 +354,7 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
             newBlock.columns = ['Col A', 'Col B', 'Col C'];
             newBlock.description = `Uploaded file: ${file.name}`;
         }
-        setBlocks(prev => [...prev, newBlock]);
+        setWorkspaceSlice(data => ({ ...data, blocks: [...data.blocks, newBlock] }));
     };
     reader.readAsDataURL(file);
   };
@@ -460,9 +513,10 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
                           className="w-full resize-none outline-none text-slate-700 leading-relaxed bg-transparent min-h-[100px]"
                           value={(block as TextBlock).content}
                           onChange={(e) => {
-                             const newBlocks = [...blocks];
-                             (newBlocks.find(b => b.id === block.id) as TextBlock).content = e.target.value;
-                             setBlocks(newBlocks);
+                             setWorkspaceSlice(data => {
+                               const newBlocks = data.blocks.map(b => b.id === block.id ? { ...b, content: e.target.value } as CanvasBlock : b);
+                               return { ...data, blocks: newBlocks };
+                             });
                           }}
                         />
                         <div className="flex gap-2 pt-2 border-t border-slate-100">
@@ -471,6 +525,12 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
                              className="text-xs flex items-center gap-1.5 bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-full hover:bg-indigo-100 font-medium transition-colors"
                            >
                              <Icons.Sparkles size={12}/> Analyze & Organize
+                           </button>
+                           <button
+                             onClick={() => handleAskNote(block as TextBlock)}
+                             className="text-xs flex items-center gap-1.5 bg-slate-100 text-slate-600 px-3 py-1.5 rounded-full hover:bg-slate-200 font-medium transition-colors"
+                           >
+                             <Icons.MessageSquare size={12}/> Ask in chat
                            </button>
                         </div>
                      </div>
