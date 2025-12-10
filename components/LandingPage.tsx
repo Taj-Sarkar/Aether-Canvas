@@ -1,7 +1,8 @@
- 'use client';
-import React from 'react';
-import { Icons } from './ui/Icons';
+"use client";
 
+import React, { useEffect, useRef } from 'react';
+import { Icons } from './ui/Icons';
+import './LandingPage.css'; // Import the specific CSS file
 import type { AppView } from '../types';
 
 interface LandingPageProps {
@@ -9,116 +10,452 @@ interface LandingPageProps {
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
+  const loaderRef = useRef<HTMLDivElement>(null);
+  const curtainRef = useRef<HTMLDivElement>(null);
+  const curtainTextRef = useRef<HTMLDivElement>(null);
+  const heroTitleRef = useRef<HTMLHeadingElement>(null);
+  const timelineProgressRef = useRef<HTMLDivElement>(null);
+  const workflowRef = useRef<HTMLElement>(null);
+  
+  useEffect(() => {
+    // --- 1. LOADER ---
+    const timer = setTimeout(() => {
+      if (loaderRef.current) {
+        loaderRef.current.classList.add("loaded");
+      }
+    }, 2300);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    // --- 4. SCROLL REVEAL (Intersection Observer) ---
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("active");
+            if (entry.target.classList.contains("intel-card"))
+              entry.target.classList.add("visible");
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+
+    const elements = document.querySelectorAll(".reveal, .intel-card, .step-row");
+    elements.forEach((el) => observer.observe(el));
+
+    // Cleanup
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+     // --- 5. PARALLAX & TIMELINE & 6. MOUSE FX ---
+     const handleScroll = () => {
+        const scrolled = window.pageYOffset;
+        if (heroTitleRef.current && scrolled < window.innerHeight) {
+          heroTitleRef.current.style.transform = `translateY(${scrolled * 0.2}px)`;
+        }
+
+        if (workflowRef.current && timelineProgressRef.current) {
+           const rect = workflowRef.current.getBoundingClientRect();
+           const windowHeight = window.innerHeight;
+           const startOffset = windowHeight / 2;
+
+           if (rect.top < startOffset && rect.bottom > 0) {
+             const percentage = Math.min(
+               Math.max(((startOffset - rect.top) / rect.height) * 100, 0),
+               100
+             );
+             timelineProgressRef.current.style.height = `${percentage}%`;
+           }
+        }
+     };
+
+     const handleMouseMove = (e: MouseEvent) => {
+        const x = e.clientX / window.innerWidth;
+        const y = e.clientY / window.innerHeight;
+        document.querySelectorAll(".orb").forEach((orb, index) => {
+           // Type casting for simple style access
+           (orb as HTMLElement).style.transform = `translate(${x * ((index + 1) * 20)}px, ${
+              y * ((index + 1) * 20)
+            }px)`;
+        });
+     };
+
+     window.addEventListener("scroll", handleScroll);
+     document.addEventListener("mousemove", handleMouseMove);
+
+     return () => {
+       window.removeEventListener("scroll", handleScroll);
+       document.removeEventListener("mousemove", handleMouseMove);
+     };
+  }, []);
+
+  const handleNavClick = (e: React.MouseEvent, targetId: string) => {
+      e.preventDefault();
+      const targetSection = document.getElementById(targetId);
+      if (!targetSection || !curtainRef.current || !curtainTextRef.current) return;
+
+      curtainTextRef.current.innerText = (e.currentTarget as HTMLElement).innerText;
+      curtainRef.current.classList.add("active");
+
+      curtainTextRef.current.animate(
+        [
+          { opacity: 0, transform: "translateY(50px)" },
+          { opacity: 1, transform: "translateY(0)" },
+        ],
+        {
+          duration: 800,
+          delay: 300,
+          easing: "cubic-bezier(0.19, 1, 0.22, 1)",
+          fill: "forwards" as any,
+        }
+      );
+
+      setTimeout(() => {
+        targetSection.scrollIntoView({
+          behavior: "auto",
+          block: "start",
+        });
+      }, 700);
+      
+      setTimeout(() => {
+        if(curtainTextRef.current) {
+            curtainTextRef.current.animate(
+                [
+                { opacity: 1, transform: "translateY(0)" },
+                { opacity: 0, transform: "translateY(-50px)" },
+                ],
+                { duration: 400, fill: "forwards" as any }
+            );
+        }
+      }, 1100);
+      
+      setTimeout(() => {
+        if(curtainRef.current) curtainRef.current.classList.remove("active");
+      }, 1500);
+  };
+
+  const handleOpenCanvas = (e: React.MouseEvent) => {
+      e.preventDefault();
+      if (!curtainRef.current || !curtainTextRef.current) {
+        // Fallback
+        onNavigate('app');
+        return;
+      }
+      
+      // 1. Set text
+      curtainTextRef.current.innerText = "LAUNCHING WORKSPACE";
+
+      // 2. Trigger Curtain
+      curtainRef.current.classList.add("active");
+
+      // 3. Animate Text In
+      curtainTextRef.current.animate(
+        [
+          { opacity: 0, transform: "translateY(50px)" },
+          { opacity: 1, transform: "translateY(0)" },
+        ],
+        {
+          duration: 800,
+          delay: 300,
+          easing: "cubic-bezier(0.19, 1, 0.22, 1)",
+          fill: "forwards" as any,
+        }
+      );
+
+      // 4. Redirect after animation
+      setTimeout(() => {
+         onNavigate('app');
+      }, 1600);
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
-      {/* Navbar */}
-      <nav className="flex items-center justify-between px-6 py-4 max-w-7xl mx-auto">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
-            <Icons.Brain size={20} />
-          </div>
-          <span className="text-xl font-bold tracking-tight">Aether Canvas</span>
+    <div className="landing-page-root">
+        <div className="ambient-mesh">
+        <div className="orb orb-1"></div>
+        <div className="orb orb-2"></div>
         </div>
-        <div className="flex gap-4">
-          <button onClick={() => onNavigate('app')} className="text-slate-600 hover:text-slate-900 font-medium">Live Demo</button>
-          <button onClick={() => onNavigate('app')} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-            Open Canvas
-          </button>
-        </div>
-      </nav>
 
-      {/* Hero */}
-      <main className="max-w-7xl mx-auto px-6 py-20 text-center">
-        <h1 className="text-5xl md:text-6xl font-bold tracking-tight text-slate-900 mb-6">
-          Turn chaotic notes & data <br />
-          <span className="text-indigo-600">into clear understanding.</span>
-        </h1>
-        <p className="text-xl text-slate-600 mb-10 max-w-2xl mx-auto">
-          Paste screenshots, messy notes, code, or datasets. A team of AI agents organizes, analyzes, and visualizes everything for you.
+        {/* LOADER */}
+        <div className="loader-container" id="loader" ref={loaderRef}>
+        <div className="shutter shutter-top"></div>
+        <div className="shutter shutter-bottom"></div>
+        <div className="loader-content">
+            <div className="loader-logo">Aether Canvas</div>
+            <div className="loader-bar-bg"><div className="loader-bar-fill"></div></div>
+        </div>
+        </div>
+
+        {/* TRANSITION CURTAIN */}
+        <div className="transition-curtain" id="curtain" ref={curtainRef}>
+        <div className="curtain-text" id="curtainText" ref={curtainTextRef}>Section Name</div>
+        </div>
+
+        <nav>
+        <a href="#" className="nav-logo">AETHER</a>
+        <div className="nav-links">
+            <a className="nav-item" onClick={(e) => handleNavClick(e, 'intelligence')}>Intelligence</a>
+            <a className="nav-item" onClick={(e) => handleNavClick(e, 'workflow')}>Workflow</a>
+            <a className="nav-item" onClick={(e) => handleNavClick(e, 'vision')}>Vision</a>
+        </div>
+        </nav>
+
+        <section className="hero" id="home">
+        <div className="hero-badge">AI-Native Note Taking</div>
+        <h1 className="hero-title" id="heroTitle" ref={heroTitleRef}>Thinking,<br />Evolved.</h1>
+        <p className="hero-sub">
+            Where your thoughts become structured reality. Aether Canvas connects
+            the dots between your ideas automatically.
         </p>
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-20">
-          <button onClick={() => onNavigate('app')} className="flex items-center gap-2 bg-indigo-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all">
-            Start Organizing
-            <Icons.ChevronRight size={20} />
-          </button>
-          <button onClick={() => onNavigate('app')} className="text-slate-600 font-medium hover:text-slate-900 px-6 py-4">
-            Explore the app
-          </button>
-        </div>
-
-        {/* Visual Mock */}
-        <div className="relative max-w-4xl mx-auto bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden aspect-[16/9] mb-24">
-          <div className="absolute inset-0 bg-slate-50/50 flex items-center justify-center">
-             {/* Abstract UI Representation */}
-             <div className="w-3/4 h-3/4 grid grid-cols-12 gap-4 opacity-90">
-                <div className="col-span-3 bg-white shadow-sm rounded-lg border border-slate-200 p-4 space-y-2">
-                   <div className="h-2 w-1/2 bg-slate-200 rounded"></div>
-                   <div className="h-2 w-3/4 bg-slate-200 rounded"></div>
-                   <div className="h-2 w-2/3 bg-slate-200 rounded"></div>
-                </div>
-                <div className="col-span-6 space-y-4">
-                   <div className="bg-white shadow-md rounded-lg p-4 border border-indigo-100 flex gap-4 items-center">
-                      <div className="w-12 h-12 bg-slate-100 rounded-md flex items-center justify-center text-slate-400"><Icons.Image size={24}/></div>
-                      <div className="flex-1 space-y-2">
-                        <div className="h-2 w-full bg-slate-100 rounded"></div>
-                        <div className="h-2 w-2/3 bg-slate-100 rounded"></div>
-                      </div>
-                   </div>
-                   <div className="bg-white shadow-md rounded-lg p-4 border border-indigo-100">
-                      <div className="h-32 bg-indigo-50 rounded-md flex items-end justify-around pb-2 px-2">
-                         <div className="w-4 bg-indigo-300 h-1/3 rounded-t"></div>
-                         <div className="w-4 bg-indigo-400 h-2/3 rounded-t"></div>
-                         <div className="w-4 bg-indigo-500 h-1/2 rounded-t"></div>
-                         <div className="w-4 bg-indigo-600 h-3/4 rounded-t"></div>
-                      </div>
-                   </div>
-                </div>
-                <div className="col-span-3 bg-white shadow-sm rounded-lg border border-slate-200 p-4">
-                   <div className="flex items-center gap-2 mb-4">
-                      <Icons.Sparkles size={16} className="text-indigo-500"/>
-                      <span className="text-xs font-bold text-slate-700">AI Agents</span>
-                   </div>
-                   <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-xs text-slate-500"><Icons.Eye size={12}/> Vision Agent</div>
-                      <div className="flex items-center gap-2 text-xs text-slate-500"><Icons.Layout size={12}/> Structurer</div>
-                      <div className="flex items-center gap-2 text-xs text-slate-500"><Icons.BarChart size={12}/> Data Viz</div>
-                   </div>
-                </div>
-             </div>
-          </div>
-          
-          {/* Floating Chips */}
-          <div className="absolute top-1/4 left-10 bg-white shadow-lg border border-slate-200 px-3 py-1.5 rounded-full flex items-center gap-2 text-sm font-medium text-slate-700 animate-bounce" style={{animationDuration: '3s'}}>
-             <div className="w-2 h-2 bg-green-500 rounded-full"></div> Vision Agent
-          </div>
-          <div className="absolute bottom-1/3 right-20 bg-white shadow-lg border border-slate-200 px-3 py-1.5 rounded-full flex items-center gap-2 text-sm font-medium text-slate-700 animate-bounce" style={{animationDuration: '4s'}}>
-             <div className="w-2 h-2 bg-blue-500 rounded-full"></div> Structurer
-          </div>
-        </div>
-
-        {/* Features Grid */}
-        <div className="grid md:grid-cols-3 gap-8 mb-24 text-left">
-           {[
-             { icon: Icons.Layout, title: "Chaos to Structure", desc: "Turn messy notes into clean outlines instantly." },
-             { icon: Icons.Eye, title: "Visual Understanding", desc: "Drag in screenshots and get detailed analysis." },
-             { icon: Icons.BarChart, title: "Instant Insights", desc: "Drop a CSV and get recommended interactive charts." },
-           ].map((feature, i) => (
-             <div key={i} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
-                <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center mb-4">
-                  <feature.icon size={20} />
-                </div>
-                <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
-                <p className="text-slate-500">{feature.desc}</p>
-             </div>
-           ))}
-        </div>
         
-        {/* Footer CTA */}
-        <div className="py-10 border-t border-slate-200">
-           <p className="text-slate-500 mb-4">Start organizing your chaos in minutes.</p>
-           <button onClick={() => onNavigate('app')} className="text-indigo-600 font-semibold hover:underline">Open the workspace &rarr;</button>
+        <a href="#" className="hero-cta" id="openCanvasBtn" onClick={handleOpenCanvas}>Open Canvas</a>
+        <div className="scroll-down">↓</div>
+        </section>
+
+        {/* INTELLIGENCE SECTION */}
+        <section id="intelligence" className="intelligence-section reveal">
+        <div className="sticky-wrapper">
+            <h2 className="section-title">Agentic<br />Intelligence</h2>
+            <p
+            style={{
+                color: 'var(--text-muted)',
+                paddingLeft: '2rem',
+                maxWidth: '400px',
+                fontSize: '1.1rem',
+                lineHeight: '1.6',
+            }}
+            >
+            Our agents don't just store text. They read, understand, and link your
+            concepts across time and space.
+            <br /><br />Experience a second brain that actually thinks.
+            </p>
         </div>
-      </main>
+        <div className="content-stream">
+            <div className="intel-card">
+            <img
+                src="https://images.unsplash.com/photo-1620712943543-bcc4688e7485?q=80&w=2565&auto=format&fit=crop"
+                className="intel-card-bg"
+                alt="AI Neural Network"
+            />
+            <div className="intel-card-overlay"></div>
+            <div className="intel-content">
+                <h3>Context Awareness</h3>
+                <p>
+                Draft a messy paragraph, and watch Aether rewrite it into a
+                structured proposal, highlighting action items automatically.
+                </p>
+            </div>
+            </div>
+            <div className="intel-card">
+            <img
+                src="https://images.unsplash.com/photo-1635070041078-e363dbe005cb?q=80&w=2670&auto=format&fit=crop"
+                className="intel-card-bg"
+                alt="Data Synthesis"
+            />
+            <div className="intel-card-overlay"></div>
+            <div className="intel-content">
+                <h3>From Chaos to Clarity</h3>
+                <p>
+                Generate, summarize, extract infromation from your notes and
+                create flashcards on the fly.
+                </p>
+            </div>
+            </div>
+            <div className="intel-card">
+            <img
+                src="https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?q=80&w=2574&auto=format&fit=crop"
+                className="intel-card-bg"
+                alt="Knowledge Graph"
+            />
+            <div className="intel-card-overlay"></div>
+            <div className="intel-content">
+                <h3>Knowledge Graph</h3>
+                <p>
+                Visualize any data. See how a data points connect for far better
+                understanding and recall.
+                </p>
+            </div>
+            </div>
+        </div>
+        </section>
+
+        {/* WORKFLOW SECTION */}
+        <section id="workflow" className="reveal" ref={workflowRef}>
+        <h2
+            className="section-title"
+            style={{ textAlign: 'center', border: 'none', marginBottom: '2rem' }}
+        >
+            Seamless Flow
+        </h2>
+
+        <div className="timeline-container">
+            <div className="timeline-line"></div>
+            <div className="timeline-progress" id="timelineProgress" ref={timelineProgressRef}></div>
+
+            {/* STEP 1 (Left) */}
+            <div className="step-row">
+            <div className="step-content">
+                <div className="step-card">
+                <span className="step-number">01</span>
+                <h3>Add Your Content</h3>
+                <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>
+                    Upload notes, images, or datasets seamlessly.
+                </p>
+                <div className="tag-container">
+                    <span className="tag">Paste text</span>
+                    <span className="tag">Drop files</span>
+                    <span className="tag">Import Data</span>
+                    <span className="tag">Camera</span>
+                </div>
+                </div>
+            </div>
+            <div className="step-marker"></div>
+            <div className="step-empty-space"></div>
+            </div>
+
+            {/* STEP 2 (Right) */}
+            <div className="step-row">
+            <div className="step-content">
+                <div className="step-card">
+                <span className="step-number">02</span>
+                <h3>Ask Anything</h3>
+                <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>
+                    Chat naturally with your knowledge base.
+                </p>
+                <div className="chat-bubble">“Explain this connection”</div>
+                <div
+                    className="chat-bubble"
+                    style={{ background: 'rgba(0, 219, 222, 0.15)' }}
+                >
+                    “Visualize this dataset”
+                </div>
+                </div>
+            </div>
+            <div className="step-marker"></div>
+            <div className="step-empty-space"></div>
+            </div>
+
+            {/* STEP 3 (Left) */}
+            <div className="step-row">
+            <div className="step-content">
+                <div className="step-card" style={{ borderColor: 'var(--accent-primary)' }}>
+                <span className="step-number">03</span>
+                <h3>AI Context Sync</h3>
+                <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>
+                    The system analyzes everything together.
+                </p>
+                <ul className="step-list">
+                    <li>✦ Text Analysis</li>
+                    <li>✦ Image Recognition</li>
+                    <li>✦ Agentic Knowledge Sharing</li>
+                </ul>
+                </div>
+            </div>
+            <div className="step-marker"></div>
+            <div className="step-empty-space"></div>
+            </div>
+
+            {/* STEP 4 (Right) */}
+            <div className="step-row">
+            <div className="step-content">
+                <div className="step-card">
+                <span className="step-number">04</span>
+                <h3>Structured Insights</h3>
+                <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>
+                    Instant transformations of raw data.
+                </p>
+                <div className="tag-container">
+                    <span className="tag">Summaries</span>
+                    <span className="tag">Breakdowns</span>
+                    <span className="tag">Diagrams</span>
+                </div>
+                </div>
+            </div>
+            <div className="step-marker"></div>
+            <div className="step-empty-space"></div>
+            </div>
+
+            {/* STEP 5 (Left) */}
+            <div className="step-row">
+            <div className="step-content">
+                <div className="step-card">
+                <span className="step-number">05</span>
+                <h3>Pin & Organize</h3>
+                <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>
+                    Build topic-wise understanding.
+                </p>
+                <ul className="step-list">
+                    <li>📌 Pin notes to board</li>
+                    <li>📂 Auto-organize by AI</li>
+                </ul>
+                </div>
+            </div>
+            <div className="step-marker"></div>
+            <div className="step-empty-space"></div>
+            </div>
+
+            {/* STEP 6 (Right) */}
+            <div className="step-row">
+            <div className="step-content">
+                <div className="step-card">
+                <span className="step-number">06</span>
+                <h3>Visual Learning</h3>
+                <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>
+                    Generate study aids with one click.
+                </p>
+                <div className="tag-container">
+                    <span className="tag" style={{ borderColor: 'var(--accent-secondary)' }}
+                    >Concept Illustrations</span
+                    >
+                    <span className="tag" style={{ borderColor: 'var(--accent-secondary)' }}
+                    >Flashcards</span
+                    >
+                </div>
+                </div>
+            </div>
+            <div className="step-marker"></div>
+            <div className="step-empty-space"></div>
+            </div>
+        </div>
+        </section>
+
+        {/* VISION SECTION */}
+        <section id="vision" className="reveal">
+        <h2
+            className="section-title"
+            style={{ border: 'none', textAlign: 'center', padding: '0' }}
+        >
+            The Future of Thought
+        </h2>
+        <div
+            style={{
+            width: '1px',
+            height: '100px',
+            background: 'linear-gradient(to bottom, var(--accent-primary), transparent)',
+            margin: '2rem 0',
+            }}
+        ></div>
+        <p
+            style={{
+            textAlign: 'center',
+            maxWidth: '600px',
+            color: 'var(--text-muted)',
+            fontSize: '1.2rem',
+            lineHeight: '1.6',
+            }}
+        >
+            We are building a canvas where the friction between having an idea and
+            executing it is zero. Aether is not a tool; it is an extension of your
+            mind.
+        </p>
+        </section>
+
+        <footer>
+        <div className="footer-logo">AETHER</div>
+        </footer>
     </div>
   );
 };
