@@ -4,9 +4,9 @@ import { Icons } from './ui/Icons';
 import { 
   AgentState, AgentType, AgentStatus, 
   CanvasBlock, BlockType, TextBlock, ImageBlock, DatasetBlock, 
-  BreakdownData, ChartConfig, Message, Workspace 
+  BreakdownData, ChartConfig, Message, Workspace, Flashcard
 } from '../types';
-import { analyzeTextStructure, analyzeImage, generateChartRecommendation, chatWithWorkspace, isApiConfigured } from '../services/geminiService';
+import { analyzeTextStructure, analyzeImage, generateChartRecommendation, chatWithWorkspace, isApiConfigured, generateImage } from '../services/geminiService';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area, PieChart, Pie, Cell } from 'recharts';
 
 // --- Sub-Components ---
@@ -48,12 +48,13 @@ interface AppShellProps {
 
 export const AppShell = ({ onLogout }: AppShellProps) => {
   // --- State ---
-  const [activeTab, setActiveTab] = useState<'chat' | 'breakdown' | 'viz' | 'agents'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'breakdown' | 'viz' | 'agents' | 'flashcards'>('chat');
   type WorkspaceData = {
     blocks: CanvasBlock[];
     chatHistory: Message[];
     breakdown: BreakdownData | null;
     visualizations: ChartConfig[];
+    flashcards: Flashcard[];
   };
   const initialWorkspaceData: WorkspaceData = {
     blocks: [
@@ -64,11 +65,12 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
     ],
     breakdown: null,
     visualizations: [],
+    flashcards: [],
   };
   const [workspaceData, setWorkspaceData] = useState<Record<string, WorkspaceData>>({
     'ws-1': initialWorkspaceData,
-    'ws-2': { ...initialWorkspaceData, blocks: [{ id: '2', type: BlockType.TEXT, title: 'Marketing Ideas', content: 'Brainstorm campaign angles and Q4 promos.' }], chatHistory: [{ id: '0b', role: 'model', content: 'Let\'s plan your marketing ideas.', timestamp: Date.now() }], breakdown: null, visualizations: [] },
-    'ws-3': { ...initialWorkspaceData, blocks: [{ id: '3', type: BlockType.TEXT, title: 'Personal Notes', content: 'Daily notes and tasks.' }], chatHistory: [{ id: '0c', role: 'model', content: 'Personal workspace ready.', timestamp: Date.now() }], breakdown: null, visualizations: [] },
+    'ws-2': { ...initialWorkspaceData, blocks: [{ id: '2', type: BlockType.TEXT, title: 'Marketing Ideas', content: 'Brainstorm campaign angles and Q4 promos.' }], chatHistory: [{ id: '0b', role: 'model', content: 'Let\'s plan your marketing ideas.', timestamp: Date.now() }], breakdown: null, visualizations: [], flashcards: [] },
+    'ws-3': { ...initialWorkspaceData, blocks: [{ id: '3', type: BlockType.TEXT, title: 'Personal Notes', content: 'Daily notes and tasks.' }], chatHistory: [{ id: '0c', role: 'model', content: 'Personal workspace ready.', timestamp: Date.now() }], breakdown: null, visualizations: [], flashcards: [] },
   });
   const [chatInput, setChatInput] = useState('');
   const [workspaces, setWorkspaces] = useState<Workspace[]>([
@@ -102,6 +104,7 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
   const chatHistory = currentData.chatHistory;
   const breakdown = currentData.breakdown;
   const visualizations = currentData.visualizations;
+  const flashcards = currentData.flashcards;
 
   const setWorkspaceSlice = (updater: (data: WorkspaceData) => WorkspaceData) => {
     setWorkspaceData(prev => ({
@@ -127,6 +130,7 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
         chatHistory: [{ id: `${Date.now()}-greet`, role: 'model', content: 'New workspace ready. Add notes or ask anything.', timestamp: Date.now() }],
         breakdown: null,
         visualizations: [],
+        flashcards: [],
       },
     }));
     setActiveWorkspaceId(newWorkspace.id);
@@ -300,8 +304,15 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
        const responseText = await chatWithWorkspace(currentData.chatHistory, message, context);
        const modelMsg: Message = { id: (Date.now()+1).toString(), role: 'model', content: responseText || "I couldn't generate a response.", timestamp: Date.now() };
        setWorkspaceSlice(data => ({ ...data, chatHistory: [...data.chatHistory, modelMsg] }));
-    } catch(e) {
-       console.error(e);
+    } catch(e: any) {
+       console.error('Chat error:', e);
+       const errorMsg: Message = { 
+         id: (Date.now()+1).toString(), 
+         role: 'model', 
+         content: `**Error:** ${e?.message || 'Failed to get response. Please check if GEMINI_API_KEY is set in your .env file.'}`, 
+         timestamp: Date.now() 
+       };
+       setWorkspaceSlice(data => ({ ...data, chatHistory: [...data.chatHistory, errorMsg] }));
     }
   };
 
@@ -327,6 +338,99 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
     };
     setWorkspaceSlice(data => ({ ...data, blocks: [...data.blocks, newNote] }));
     setActiveTab('chat');
+  };
+
+  const handleGenerateFlashcards = async () => {
+    setActiveTab('flashcards');
+    
+    // Build context from notes and recent chat
+    const context = [
+      ...blocks.map(b => {
+        if(b.type === BlockType.TEXT) return `Note (${b.title}): ${(b as TextBlock).content}`;
+        if(b.type === BlockType.DATASET) return `Dataset (${b.title}): ${(b as DatasetBlock).description}`;
+        return `Image (${b.title})`;
+      }),
+      ...chatHistory.slice(-5).map(m => `${m.role === 'user' ? 'User' : 'AI'}: ${m.content}`)
+    ].join('\n\n');
+
+    const prompt = `Generate flashcards from the following content. Extract the most important concepts, definitions, formulas, or steps. Create short, focused flashcards (one idea per card).
+
+Format each flashcard as:
+Front: [Clear question, cue, or fill-in-the-blank]
+Back: [Concise answer with optional tiny explanation/example]
+Image_prompt: [Concrete, helpful illustration idea]
+
+Content to analyze:
+${context}
+
+Return ONLY the flashcards in this exact format (one flashcard per block):
+---
+Front: [question]
+Back: [answer]
+Image_prompt: [description]
+---`;
+
+    try {
+      const responseText = await chatWithWorkspace([], prompt, context);
+      
+      // Parse flashcards from response
+      const flashcardBlocks = responseText.split('---').filter(block => block.trim());
+      const newFlashcards: Flashcard[] = [];
+      
+      flashcardBlocks.forEach((block, idx) => {
+        const frontMatch = block.match(/Front:\s*(.+?)(?:\n|Back:)/s);
+        const backMatch = block.match(/Back:\s*(.+?)(?:\n|Image_prompt:)/s);
+        const imageMatch = block.match(/Image_prompt:\s*(.+?)(?:\n|$)/s);
+        
+        if (frontMatch && backMatch) {
+          newFlashcards.push({
+            id: `${Date.now()}-${idx}`,
+            front: frontMatch[1].trim(),
+            back: backMatch[1].trim(),
+            imagePrompt: imageMatch ? imageMatch[1].trim() : undefined,
+          });
+        }
+      });
+
+      if (newFlashcards.length > 0) {
+        // Add flashcards first
+        setWorkspaceSlice(data => ({ 
+          ...data, 
+          flashcards: [...data.flashcards, ...newFlashcards] 
+        }));
+
+        // Generate images for flashcards that have image prompts
+        newFlashcards.forEach(async (card, idx) => {
+          if (card.imagePrompt) {
+            try {
+              const imageUrl = await generateImage(card.imagePrompt);
+              setWorkspaceSlice(data => ({
+                ...data,
+                flashcards: data.flashcards.map(c => 
+                  c.id === card.id ? { ...c, imageUrl } : c
+                )
+              }));
+            } catch (e: any) {
+              console.error(`Failed to generate image for card ${idx + 1}:`, e);
+              // Continue without image - card will still be created
+            }
+          }
+        });
+      } else {
+        // Fallback: create a single flashcard from the response
+        setWorkspaceSlice(data => ({ 
+          ...data, 
+          flashcards: [...data.flashcards, {
+            id: Date.now().toString(),
+            front: 'Generated from workspace content',
+            back: responseText.slice(0, 200) + (responseText.length > 200 ? '...' : ''),
+          }]
+        }));
+      }
+    } catch (e: any) {
+      console.error('Flashcard generation error:', e);
+      alert(`Failed to generate flashcards: ${e?.message || 'Unknown error'}`);
+    }
   };
 
   // Fake file upload handler
@@ -589,6 +693,7 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
               { id: 'breakdown', icon: Icons.Layers, label: 'Breakdown' },
               { id: 'viz', icon: Icons.BarChart, label: 'Visuals' },
               { id: 'agents', icon: Icons.Bot, label: 'Agents' },
+              { id: 'flashcards', icon: Icons.FileText, label: 'Cards' },
             ].map(tab => (
                <button 
                  key={tab.id}
@@ -615,13 +720,41 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
                                   {msg.role === 'model' && <div className="text-[10px] text-slate-400 font-bold mb-1 uppercase tracking-wider">AI Assistant</div>}
                                   <div dangerouslySetInnerHTML={{ __html: msg.content.replace(/\n/g, '<br/>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>') }} />
                                 </div>
-                                <button
-                                  onClick={() => handlePinMessage(msg)}
-                                  className={`text-[11px] px-2 py-1 rounded-md transition-colors ${msg.role === 'user' ? 'text-indigo-100 hover:bg-indigo-500/40' : 'text-slate-400 hover:bg-slate-100'}`}
-                                  title="Pin to notes"
-                                >
-                                  Pin
-                                </button>
+                                <div className="flex flex-col gap-1">
+                                  {msg.role === 'model' && (
+                                    <button
+                                      onClick={async () => {
+                                        // Extract a visual concept from the message
+                                        const visualPrompt = `A clear, educational illustration showing: ${msg.content.slice(0, 200)}`;
+                                        try {
+                                          const imageUrl = await generateImage(visualPrompt);
+                                          // Add as image block to workspace
+                                          const newBlock: ImageBlock = {
+                                            id: Date.now().toString(),
+                                            type: BlockType.IMAGE,
+                                            title: 'Generated Concept Visual',
+                                            src: imageUrl,
+                                            mimeType: 'image/png',
+                                          };
+                                          setWorkspaceSlice(data => ({ ...data, blocks: [...data.blocks, newBlock] }));
+                                        } catch (e: any) {
+                                          alert(`Failed to generate image: ${e?.message || 'Unknown error'}`);
+                                        }
+                                      }}
+                                      className="text-[11px] px-2 py-1 rounded-md transition-colors text-purple-600 hover:bg-purple-50 border border-purple-200"
+                                      title="Generate visual for this concept"
+                                    >
+                                      🎨 Visual
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => handlePinMessage(msg)}
+                                    className={`text-[11px] px-2 py-1 rounded-md transition-colors ${msg.role === 'user' ? 'text-indigo-100 hover:bg-indigo-500/40' : 'text-slate-400 hover:bg-slate-100'}`}
+                                    title="Pin to notes"
+                                  >
+                                    Pin
+                                  </button>
+                                </div>
                               </div>
                            </div>
                         </div>
@@ -645,12 +778,20 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
                      </div>
                      <div className="flex items-center justify-between mt-2 text-[11px] text-slate-500">
                        <span className="text-slate-400">Context aware of {blocks.length} blocks.</span>
-                       <button 
-                         onClick={handleSaveLastResponseToNote}
-                         className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors text-[11px] font-medium"
-                       >
-                         <Icons.FileText size={12}/> Save last AI reply as note
-                       </button>
+                       <div className="flex gap-2">
+                         <button 
+                           onClick={handleGenerateFlashcards}
+                           className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-purple-50 text-purple-600 hover:bg-purple-100 transition-colors text-[11px] font-medium"
+                         >
+                           <Icons.FileText size={12}/> Generate Flashcards
+                         </button>
+                         <button 
+                           onClick={handleSaveLastResponseToNote}
+                           className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors text-[11px] font-medium"
+                         >
+                           <Icons.FileText size={12}/> Save last AI reply as note
+                         </button>
+                       </div>
                      </div>
                   </div>
                </div>
@@ -770,6 +911,96 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
                         ))}
                      </div>
                   </div>
+               </div>
+            )}
+
+            {/* FLASHCARDS TAB */}
+            {activeTab === 'flashcards' && (
+               <div className="p-6 space-y-4 h-full overflow-y-auto">
+                  <div className="flex items-center justify-between mb-4">
+                     <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Flashcards</h3>
+                     <button
+                       onClick={handleGenerateFlashcards}
+                       className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-medium transition-colors"
+                     >
+                       <Icons.Plus size={14}/> Generate
+                     </button>
+                  </div>
+                  
+                  {flashcards.length === 0 ? (
+                     <div className="text-center text-slate-400 mt-20">
+                        <Icons.FileText size={48} className="mx-auto mb-4 opacity-20"/>
+                        <p className="mb-2">No flashcards yet.</p>
+                        <p className="text-xs">Click "Generate" to create flashcards from your workspace content.</p>
+                     </div>
+                  ) : (
+                     <div className="space-y-4">
+                        {flashcards.map((card, idx) => (
+                           <div key={card.id} className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow">
+                              <div className="flex items-start justify-between mb-2">
+                                 <span className="text-xs font-medium text-slate-500">Card {idx + 1}</span>
+                                 <button
+                                   onClick={() => {
+                                     setWorkspaceSlice(data => ({
+                                       ...data,
+                                       flashcards: data.flashcards.filter(c => c.id !== card.id)
+                                     }));
+                                   }}
+                                   className="text-slate-400 hover:text-red-600 transition-colors"
+                                 >
+                                   <Icons.Trash size={14}/>
+                                 </button>
+                              </div>
+                              <div className="space-y-3">
+                                 <div className="bg-indigo-50 border-l-4 border-indigo-500 p-3 rounded">
+                                    <div className="text-xs font-semibold text-indigo-700 uppercase tracking-wide mb-1">Front</div>
+                                    <div className="text-sm text-slate-800">{card.front}</div>
+                                 </div>
+                                 <div className="bg-slate-50 border-l-4 border-slate-400 p-3 rounded">
+                                    <div className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1">Back</div>
+                                    <div className="text-sm text-slate-800">{card.back}</div>
+                                 </div>
+                                 {card.imageUrl ? (
+                                    <div className="bg-green-50 border-l-4 border-green-400 p-3 rounded">
+                                       <div className="text-xs font-semibold text-green-700 uppercase tracking-wide mb-2">Visual Aid</div>
+                                       <img 
+                                         src={card.imageUrl} 
+                                         alt={card.imagePrompt || "Flashcard illustration"} 
+                                         className="w-full rounded-lg border border-slate-200 max-h-64 object-contain bg-white"
+                                       />
+                                       {card.imagePrompt && (
+                                          <div className="text-xs text-slate-600 italic mt-2">Prompt: {card.imagePrompt}</div>
+                                       )}
+                                    </div>
+                                 ) : card.imagePrompt ? (
+                                    <div className="bg-amber-50 border-l-4 border-amber-400 p-3 rounded">
+                                       <div className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1">Image Idea</div>
+                                       <div className="text-xs text-slate-700 italic mb-2">{card.imagePrompt}</div>
+                                       <button
+                                         onClick={async () => {
+                                           try {
+                                             const imageUrl = await generateImage(card.imagePrompt!);
+                                             setWorkspaceSlice(data => ({
+                                               ...data,
+                                               flashcards: data.flashcards.map(c => 
+                                                 c.id === card.id ? { ...c, imageUrl } : c
+                                               )
+                                             }));
+                                           } catch (e: any) {
+                                             alert(`Failed to generate image: ${e?.message || 'Unknown error'}`);
+                                           }
+                                         }}
+                                         className="text-xs px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded transition-colors"
+                                       >
+                                         Generate Image
+                                       </button>
+                                    </div>
+                                 ) : null}
+                              </div>
+                           </div>
+                        ))}
+                     </div>
+                  )}
                </div>
             )}
 

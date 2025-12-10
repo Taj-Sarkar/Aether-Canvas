@@ -80,6 +80,14 @@ export interface Message {
   timestamp: number;
 }
 
+export interface Flashcard {
+  id: string;
+  front: string;
+  back: string;
+  imagePrompt?: string;
+  imageUrl?: string;
+}
+
 export interface Workspace {
   id: string;
   name: string;
