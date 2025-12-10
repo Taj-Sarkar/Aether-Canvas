@@ -8,13 +8,12 @@ This contains everything you need to run your app locally.
 
 View your app in AI Studio: https://ai.studio/apps/drive/16m5xKhtrHVm9qyTrxIzJvdbGKa7qzi29
 
-## Run Locally
+## Run Locally (Next.js)
 
-**Prerequisites:**  Node.js
+**Prerequisites:** Node.js 18+
 
+1. Install dependencies: `npm install`
+2. Add `.env.local` with `GEMINI_API_KEY=your_key_here`
+3. Run the app: `npm run dev`
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+This demo keeps Tailwind via CDN for simplicity; for production, add a local Tailwind config.

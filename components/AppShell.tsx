@@ -1,3 +1,4 @@
+ 'use client';
 import React, { useState, useRef, useEffect, type ChangeEvent } from 'react';
 import { Icons } from './ui/Icons';
 import { 
