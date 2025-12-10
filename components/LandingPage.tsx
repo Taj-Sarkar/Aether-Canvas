@@ -20,9 +20,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
           <span className="text-xl font-bold tracking-tight">Aether Canvas</span>
         </div>
         <div className="flex gap-4">
-          <button onClick={() => onNavigate('signin')} className="text-slate-600 hover:text-slate-900 font-medium">Sign In</button>
-          <button onClick={() => onNavigate('signup')} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-            Get Started
+          <button onClick={() => onNavigate('app')} className="text-slate-600 hover:text-slate-900 font-medium">Live Demo</button>
+          <button onClick={() => onNavigate('app')} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+            Open Canvas
           </button>
         </div>
       </nav>
@@ -37,12 +37,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
           Paste screenshots, messy notes, code, or datasets. A team of AI agents organizes, analyzes, and visualizes everything for you.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-20">
-          <button onClick={() => onNavigate('signup')} className="flex items-center gap-2 bg-indigo-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all">
+          <button onClick={() => onNavigate('app')} className="flex items-center gap-2 bg-indigo-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all">
             Start Organizing
             <Icons.ChevronRight size={20} />
           </button>
-          <button onClick={() => onNavigate('signin')} className="text-slate-600 font-medium hover:text-slate-900 px-6 py-4">
-            Try Demo
+          <button onClick={() => onNavigate('app')} className="text-slate-600 font-medium hover:text-slate-900 px-6 py-4">
+            Explore the app
           </button>
         </div>
 
@@ -116,7 +116,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
         {/* Footer CTA */}
         <div className="py-10 border-t border-slate-200">
            <p className="text-slate-500 mb-4">Start organizing your chaos in minutes.</p>
-           <button onClick={() => onNavigate('signup')} className="text-indigo-600 font-semibold hover:underline">Create your workspace &rarr;</button>
+           <button onClick={() => onNavigate('app')} className="text-indigo-600 font-semibold hover:underline">Open the workspace &rarr;</button>
         </div>
       </main>
     </div>

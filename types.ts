@@ -87,5 +87,5 @@ export interface Workspace {
   lastActive: Date;
 }
 
-// Simple view routing options for the demo app
-export type AppView = 'landing' | 'signin' | 'signup' | 'app';
+// Simple view routing options for the demo app (auth removed)
+export type AppView = 'landing' | 'app';
