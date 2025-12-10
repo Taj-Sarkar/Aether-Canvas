@@ -23,7 +23,9 @@ import {
   Database,
   AlertTriangle,
   Trash,
-  Pin
+  Pin,
+  Moon,
+  Sun
 } from 'lucide-react';
 
 export const Icons = {
@@ -50,5 +52,7 @@ export const Icons = {
   Database,
   AlertTriangle,
   Trash,
-  Pin
+  Pin,
+  Moon,
+  Sun
 };
