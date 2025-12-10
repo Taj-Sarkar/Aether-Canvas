@@ -207,6 +207,19 @@
   100% { transform: scaleY(0); transform-origin: top; }
 }
 
+/* --- CHANGE 1: New Animation for Final Exit --- */
+/* This animation covers the screen and STAYS covered */
+.landing-page-root .transition-curtain.exit {
+  pointer-events: all;
+  animation: curtainCover 0.8s var(--easing) forwards;
+}
+
+/* Define the one-way animation (stops at 100%) */
+@keyframes curtainCover {
+  0% { transform: scaleY(0); transform-origin: bottom; }
+  100% { transform: scaleY(1); transform-origin: bottom; }
+}
+
 /* --- NAV & HERO --- */
 .landing-page-root nav {
   position: fixed;

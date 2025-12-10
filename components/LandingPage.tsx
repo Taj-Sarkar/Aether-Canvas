@@ -149,8 +149,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
       // 1. Set text
       curtainTextRef.current.innerText = "LAUNCHING WORKSPACE";
 
-      // 2. Trigger Curtain
-      curtainRef.current.classList.add("active");
+      // 2. Add 'exit' class (Defined in CSS CHANGE 1)
+      // This class covers the screen but DOES NOT animate back to open.
+      // It stays black because of the 'forwards' CSS property.
+      curtainRef.current.classList.add("exit");
 
       // 3. Animate Text In
       curtainTextRef.current.animate(
@@ -166,10 +168,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
         }
       );
 
-      // 4. Redirect after animation
+      // 4. Wait for animation to cover screen, then redirect
+      // The screen will remain black during this "load" until the new page paints
       setTimeout(() => {
          onNavigate('app');
-      }, 1600);
+      }, 2000);
   };
 
   return (
