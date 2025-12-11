@@ -69,6 +69,7 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [activeTab, setActiveTab] = useState<'chat' | 'breakdown' | 'viz' | 'agents' | 'flashcards'>('chat');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingFlashcards, setIsGeneratingFlashcards] = useState(false);
   
   type WorkspaceData = {
     blocks: CanvasBlock[];
@@ -296,6 +297,30 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
      }
   };
 
+  // --- MARKDOWN PARSER ---
+  const renderMarkdown = (text: string) => {
+    let html = text
+      // Headers
+      .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+      .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+      .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+      // Bold
+      .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+      // Code blocks
+      .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+      // Lists
+      .replace(/^\s*-\s+(.*$)/gim, '<li>$1</li>')
+      // Line breaks (handle careful not to break HTML)
+      .replace(/\n/g, '<br/>');
+      
+    // Wrap lists in ul (simple heuristic for consecutive li)
+    // Note: This is a basic parser. For perfection, use a library. 
+    // This simple replace might leave loose <li> if not careful, 
+    // but for this restricted AI output it usually suffices or requires a second pass.
+    
+    return html;
+  };
+
   const handleRecommendCharts = async (block: DatasetBlock) => {
       resetAgents();
       setActiveTab('agents');
@@ -325,9 +350,14 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
       if(b.type === BlockType.DATASET) return `Dataset (${b.title}): ${(b as DatasetBlock).description}`;
       return `Image (${b.title})`;
     }).join('\\n');
+    
+    // Instructions for structure
+    const systemPrompt = `\n\nAnswer the user's request based on the context above. 
+    Format your response using Markdown: use ### for headers, - for lists, ** for bold, and \`\`\` for code. 
+    Keep it clean and easy to read.`;
 
     try {
-       const responseText = await chatWithWorkspace(currentData.chatHistory, message, context);
+       const responseText = await chatWithWorkspace(currentData.chatHistory, message, context + systemPrompt);
        const modelMsg: Message = { id: (Date.now()+1).toString(), role: 'model', content: responseText || "I couldn't generate a response.", timestamp: Date.now() };
        setWorkspaceSlice(data => ({ ...data, chatHistory: [...data.chatHistory, modelMsg] }));
     } catch(e: any) {
@@ -370,6 +400,7 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
 
   const handleGenerateFlashcards = async () => {
     setActiveTab('flashcards');
+    setIsGeneratingFlashcards(true);
     
     const context = [
       ...blocks.map(b => {
@@ -378,41 +409,44 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
         return `Image (${b.title})`;
       }),
       ...chatHistory.slice(-5).map(m => `${m.role === 'user' ? 'User' : 'AI'}: ${m.content}`)
-    ].join('\\n\\n');
+    ].join('\n\n');
 
-    const prompt = `Generate flashcards from the following content. Extract the most important concepts, definitions, formulas, or steps. Create short, focused flashcards (one idea per card).
-
-Format each flashcard as:
-Front: [Clear question, cue, or fill-in-the-blank]
-Back: [Concise answer with optional tiny explanation/example]
-
-Content to analyze:
-${context}
-
-Return ONLY the flashcards in this exact format (one flashcard per block):
----
-Front: [question]
-Back: [answer]
----`;
+    const prompt = `Generate flashcards from the content. Extract key concepts.
+    Return a STRICT JSON Array of objects: [{"front": "Question...", "back": "Answer..."}]. 
+    Do not use markdown formatting (no \`\`\`json). Just the raw JSON array.`;
 
     try {
-      const responseText = await chatWithWorkspace([], prompt, context);
+      let responseText = await chatWithWorkspace([], prompt, context);
+      // cleanup potential markdown code blocks if the AI ignores strict instruction
+      responseText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
       
-      const flashcardBlocks = responseText.split('---').filter(block => block.trim());
-      const newFlashcards: Flashcard[] = [];
+      let newFlashcards: Flashcard[] = [];
       
-      flashcardBlocks.forEach((block, idx) => {
-        const frontMatch = block.match(/Front:\\s*(.+?)(?:\\n|Back:)/s);
-        const backMatch = block.match(/Back:\\s*(.+?)(?:\\n|$)/s);
-        
-        if (frontMatch && backMatch) {
-          newFlashcards.push({
-            id: `${Date.now()}-${idx}`,
-            front: frontMatch[1].trim(),
-            back: backMatch[1].trim(),
-          });
+      try {
+        const parsed = JSON.parse(responseText);
+        if(Array.isArray(parsed)) {
+            newFlashcards = parsed.map((card: any, idx: number) => ({
+                id: `${Date.now()}-${idx}`,
+                front: card.front || "Review this",
+                back: card.back || "No content"
+            }));
         }
-      });
+      } catch(e) {
+          console.warn("JSON parse failed, trying regex fallback", e);
+          // Fallback to regex if JSON fails
+          const flashcardBlocks = responseText.split('---').filter(block => block.trim());
+          flashcardBlocks.forEach((block, idx) => {
+             const frontMatch = block.match(/Front:\s*(.+?)(?:\n|Back:)/s);
+             const backMatch = block.match(/Back:\s*(.+?)(?:\n|$)/s);
+             if (frontMatch && backMatch) {
+               newFlashcards.push({
+                 id: `${Date.now()}-${idx}`,
+                 front: frontMatch[1].trim(),
+                 back: backMatch[1].trim(),
+               });
+             }
+          });
+      }
 
       if (newFlashcards.length > 0) {
         setWorkspaceSlice(data => ({ 
@@ -424,14 +458,16 @@ Back: [answer]
           ...data, 
           flashcards: [...data.flashcards, {
             id: Date.now().toString(),
-            front: 'Generated from workspace content',
-            back: responseText.slice(0, 200) + (responseText.length > 200 ? '...' : ''),
+            front: 'Error generating',
+            back: 'Could not parse response. Try again.',
           }]
         }));
       }
     } catch (e: any) {
       console.error('Flashcard generation error:', e);
       alert(`Failed to generate flashcards: ${e?.message || 'Unknown error'}`);
+    } finally {
+        setIsGeneratingFlashcards(false);
     }
   };
 
@@ -762,7 +798,8 @@ Back: [answer]
                             </div>
                           )}
                           <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', width: '100%' }}>
-                            <div className="msg-bubble" style={{ flex: 1 }} dangerouslySetInnerHTML={{ __html: msg.content.replace(/\\n/g, '<br/>').replace(/\\*\\*(.*?)\\*\\*/g, '<b>$1</b>') }} />
+                            {/* Use renderMarkdown instead of direct replace */}
+                            <div className="msg-bubble markdown-content" style={{ flex: 1 }} dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }} />
                             {msg.role === 'model' && (
                               <div 
                                 onClick={() => handlePinMessage(msg)}
@@ -1001,6 +1038,27 @@ Back: [answer]
                           </div>
                        ))}
                     </div>
+                 )}
+
+                 {/* FLASHCARD LOADING INDICATOR */}
+                 {isGeneratingFlashcards && (
+                     <div style={{ 
+                         display: 'flex', 
+                         flexDirection: 'column', 
+                         alignItems: 'center', 
+                         justifyContent: 'center', 
+                         marginTop: '30px',
+                         opacity: 0.8 
+                     }}>
+                         <div className="typing-dots">
+                           <div className="typing-dot" style={{ backgroundColor: 'var(--app-accent-secondary)' }}></div>
+                           <div className="typing-dot" style={{ backgroundColor: 'var(--app-accent-secondary)' }}></div>
+                           <div className="typing-dot" style={{ backgroundColor: 'var(--app-accent-secondary)' }}></div>
+                         </div>
+                         <div style={{ marginTop: '10px', fontSize: '0.9rem', color: 'var(--app-text-muted)' }}>
+                             Generating flashcards...
+                         </div>
+                     </div>
                  )}
               </div>
            )}
