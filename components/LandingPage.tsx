@@ -16,6 +16,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
   const heroTitleRef = useRef<HTMLHeadingElement>(null);
   const timelineProgressRef = useRef<HTMLDivElement>(null);
   const workflowRef = useRef<HTMLElement>(null);
+  const intelligenceSectionRef = useRef<HTMLElement>(null);
+  const stickyWrapperRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
     // --- 1. LOADER ---
@@ -51,12 +53,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
   }, []);
 
   useEffect(() => {
-     // --- 5. PARALLAX & TIMELINE & 6. MOUSE FX ---
+     // --- 5. PARALLAX & TIMELINE & 6. MOUSE FX & STICKY INTELLIGENCE ---
      const handleScroll = () => {
         const scrolled = window.pageYOffset;
         if (heroTitleRef.current && scrolled < window.innerHeight) {
           heroTitleRef.current.style.transform = `translateY(${scrolled * 0.2}px)`;
         }
+
+        // Sticky logic is handled by CSS (native position: sticky)
+        // No JS intervention needed to stick/release.
+
 
         if (workflowRef.current && timelineProgressRef.current) {
            const rect = workflowRef.current.getBoundingClientRect();
@@ -219,8 +225,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
         </section>
 
         {/* INTELLIGENCE SECTION */}
-        <section id="intelligence" className="intelligence-section reveal">
-        <div className="sticky-wrapper">
+        <section id="intelligence" className="intelligence-section reveal" ref={intelligenceSectionRef}>
+        <div className="sticky-wrapper" ref={stickyWrapperRef}>
             <h2 className="section-title">Agentic<br />Intelligence</h2>
             <p
             style={{
@@ -311,7 +317,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
                     <span className="tag">Paste text</span>
                     <span className="tag">Drop files</span>
                     <span className="tag">Import Data</span>
-                    <span className="tag">Camera</span>
+                    
                 </div>
                 </div>
             </div>

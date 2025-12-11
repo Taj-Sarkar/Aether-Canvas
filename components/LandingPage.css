@@ -17,7 +17,8 @@
   background-color: var(--bg-color);
   color: var(--text-main);
   font-family: "Inter", sans-serif;
-  overflow-x: hidden;
+  overflow-x: clip;
+  overflow-y: visible;
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
   position: relative;
@@ -364,13 +365,14 @@
 }
 .landing-page-root .sticky-wrapper {
   width: 35%;
-  height: 50vh;
   position: sticky;
   top: 25vh;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
+  align-self: flex-start;
 }
+
 .landing-page-root .content-stream {
   width: 65%;
   display: flex;
