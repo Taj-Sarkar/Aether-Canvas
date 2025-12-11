@@ -500,6 +500,58 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
     reader.readAsDataURL(file);
   };
 
+  const handleCodeTask = async (task: string) => {
+    if (!task.trim()) return;
+    
+    // Clear input
+    setChatInput(''); // Reusing chat input state or create a new local one if preferred. 
+    // Let's create a local one in the render or just use prompt() for simplicity first, 
+    // BUT the plan said "input area". Let's simply use a local variable in the UI state or add one.
+    // For now we will add a local state for code input in the component.
+  };
+  
+  // NOTE: We need a state for the code agent input. 
+  // Let's add it at the top level first, but since I can't reach there in this chunk easily without re-reading,
+  // I'll assume I can add it or just use a ref in the UI. 
+  // Actually, I should probably add the state in a separate chunk.
+  
+  // Let's just implement the logic here assuming 'codePrompt' is passed or handled.
+  // Wait, I can't add state comfortably in the middle. 
+  // I will add the logic function here and usage in JSX.
+  
+  const executeCodeTask = async (promptText: string) => {
+      resetAgents();
+      setActiveTab('agents');
+      updateAgent(AgentType.CODE, AgentStatus.WORKING, 'Generating code...');
+      
+      try {
+        const systemContext = `You are a code generator. Generate ONLY the code requested, nothing else.
+Do NOT include any explanations, introductions, or commentary.
+Do NOT use markdown code fences (\`\`\`).
+Return raw code only.`;
+        
+        let codeResult = await chatWithWorkspace([], promptText, systemContext);
+        
+        // Strip any markdown code fencing if present
+        codeResult = codeResult
+          .replace(/```[\w]*\n/g, '')  // Remove opening fence with language
+          .replace(/```\n?/g, '')       // Remove closing fence
+          .trim();
+        
+        const newBlock: TextBlock = {
+            id: Date.now().toString(),
+            type: BlockType.TEXT,
+            title: `Code: ${promptText.slice(0, 20)}...`,
+            content: codeResult
+        };
+        
+        setWorkspaceSlice(data => ({ ...data, blocks: [...data.blocks, newBlock] }));
+        updateAgent(AgentType.CODE, AgentStatus.COMPLETED, 'Code generated.');
+      } catch(e) {
+          updateAgent(AgentType.CODE, AgentStatus.ERROR, 'Failed to generate code.');
+      }
+  };
+
   const toggleTheme = () => {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
   };
@@ -987,6 +1039,30 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
                           </div>
                        ))}
                     </div>
+                 </div>
+
+                 {/* CODE AGENT INPUT AREA */}
+                 <div className="note-card">
+                     <h3 style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--app-text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>Code Agent Task</h3>
+                     <textarea 
+                       className="note-textarea" 
+                       style={{ minHeight: '80px', fontSize: '0.85rem', marginBottom: '12px' }}
+                       placeholder="e.g., Write a React component for a Navbar..."
+                       id="code-agent-input"
+                     />
+                     <button 
+                       className="btn btn-primary" 
+                       style={{ width: '100%' }}
+                       onClick={() => {
+                           const input = document.getElementById('code-agent-input') as HTMLTextAreaElement;
+                           if(input && input.value) {
+                               executeCodeTask(input.value);
+                               input.value = '';
+                           }
+                       }}
+                     >
+                       <Icons.Code size={16}/> Generate Code
+                     </button>
                  </div>
               </div>
            )}
