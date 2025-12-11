@@ -68,6 +68,7 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
   // --- State ---
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [activeTab, setActiveTab] = useState<'chat' | 'breakdown' | 'viz' | 'agents' | 'flashcards'>('chat');
+  const [isGenerating, setIsGenerating] = useState(false);
   
   type WorkspaceData = {
     blocks: CanvasBlock[];
@@ -317,6 +318,7 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
     setWorkspaceSlice(data => ({ ...data, chatHistory: [...data.chatHistory, userMsg] }));
     setChatInput('');
     setActiveTab('chat');
+    setIsGenerating(true);
 
     const context = currentData.blocks.map(b => {
       if(b.type === BlockType.TEXT) return `Note (${b.title}): ${(b as TextBlock).content}`;
@@ -337,6 +339,8 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
          timestamp: Date.now() 
        };
        setWorkspaceSlice(data => ({ ...data, chatHistory: [...data.chatHistory, errorMsg] }));
+    } finally {
+       setIsGenerating(false);
     }
   };
 
@@ -778,6 +782,22 @@ Back: [answer]
                           </div>
                        </div>
                     ))}
+                    
+                    {/* LOADING DOTS */}
+                    {isGenerating && (
+                      <div className="message ai">
+                         <div className="msg-meta">
+                           <Icons.Bot size={12} /> Aether Agent
+                         </div>
+                         <div className="msg-bubble" style={{ width: 'fit-content' }}>
+                            <div className="typing-dots">
+                              <div className="typing-dot"></div>
+                              <div className="typing-dot"></div>
+                              <div className="typing-dot"></div>
+                            </div>
+                         </div>
+                      </div>
+                    )}
                  </div>
                  <div className="input-area">
                     <div className="input-wrapper">
