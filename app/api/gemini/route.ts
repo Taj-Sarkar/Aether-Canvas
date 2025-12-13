@@ -68,7 +68,7 @@ export async function POST(request: Request) {
           contents: {
             parts: [
               { inlineData: { data: payload?.base64Data, mimeType: payload?.mimeType } },
-              { text: payload?.prompt || "Describe this image in detail and extract any visible text." },
+              { text: (payload?.prompt || "Analyze this image.") + "\n\nProvide a structured analysis in Markdown with the following sections:\n### Summary\nBrief overview of the image.\n\n### Key Visual Elements\nList of main objects, colors, and composition details.\n\n### Detected Text\nAny visible text in the image (or 'None').\n\n### Key Insights\nInterpretation or meaning of the image." },
             ],
           },
         });

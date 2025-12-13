@@ -741,9 +741,7 @@ Return raw code only.`;
                              fontSize: '0.9rem', 
                              color: 'var(--app-text-main)', 
                              lineHeight: '1.6' 
-                           }}>
-                             {(block as ImageBlock).analysis}
-                           </div>
+                           }} dangerouslySetInnerHTML={{ __html: renderMarkdown((block as ImageBlock).analysis!) }} />
                          </div>
                        )}
                        
