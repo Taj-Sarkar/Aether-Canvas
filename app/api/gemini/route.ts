@@ -37,7 +37,7 @@ export async function POST(request: Request) {
             actionItems: { type: Type.ARRAY, items: { type: Type.STRING } },
             tags: { type: Type.ARRAY, items: { type: Type.STRING } },
           },
-          required: ["summary", "keyPoints", "tags"],
+          required: ["summary", "keyPoints", "tags", "actionItems"],
         };
 
         const response = await ai.models.generateContent({

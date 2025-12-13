@@ -934,7 +934,7 @@ Return raw code only.`;
                       <div>
                          <h3 style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--app-text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>Key Points</h3>
                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            {breakdown.keyPoints.map((pt, i) => (
+                            {(breakdown.keyPoints || []).map((pt, i) => (
                               <div key={i} style={{ display: 'flex', gap: '8px', padding: '12px', background: 'var(--app-input-bg)', borderRadius: '8px', border: '1px solid var(--app-panel-border)', fontSize: '0.9rem', color: 'var(--app-text-main)' }}>
                                 <span style={{ color: 'var(--app-accent-secondary)' }}>•</span> {pt}
                               </div>
@@ -945,7 +945,7 @@ Return raw code only.`;
                       <div>
                          <h3 style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--app-text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>Action Items</h3>
                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            {breakdown.actionItems.map((item, i) => (
+                            {(breakdown.actionItems || []).map((item, i) => (
                               <div key={i} className="ai-chip" style={{ padding: '12px', justifyContent: 'flex-start' }}>
                                  <div style={{ width: '16px', height: '16px', borderRadius: '3px', border: '2px solid var(--app-accent-primary)' }}></div>
                                  {item}
@@ -955,7 +955,7 @@ Return raw code only.`;
                       </div>
                       
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                         {breakdown.tags.map(tag => (
+                         {(breakdown.tags || []).map(tag => (
                             <span key={tag} className="ai-chip">#{tag}</span>
                          ))}
                       </div>
