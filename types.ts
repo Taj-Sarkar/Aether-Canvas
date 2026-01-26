@@ -96,5 +96,12 @@ export interface Workspace {
   lastActive: Date;
 }
 
-// Simple view routing options for the demo app (auth removed)
-export type AppView = 'landing' | 'app';
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+}
+
+// View routing options including authentication
+export type AppView = 'landing' | 'signin' | 'signup' | 'app';
+

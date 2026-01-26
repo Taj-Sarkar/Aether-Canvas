@@ -6,10 +6,12 @@ import './LandingPage.css'; // Import the specific CSS file
 import type { AppView } from '../types';
 
 interface LandingPageProps {
+  user: { id: string; email: string; name: string } | null;
   onNavigate: (page: AppView) => void;
+  onLogout: () => void;
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ user, onNavigate, onLogout }) => {
   const loaderRef = useRef<HTMLDivElement>(null);
   const curtainRef = useRef<HTMLDivElement>(null);
   const curtainTextRef = useRef<HTMLDivElement>(null);
@@ -146,21 +148,45 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
 
   const handleOpenCanvas = (e: React.MouseEvent) => {
       e.preventDefault();
-      if (!curtainRef.current || !curtainTextRef.current) {
-        // Fallback
-        onNavigate('app');
+      
+      // If user is already authenticated, go directly to app
+      if (user) {
+        if (!curtainRef.current || !curtainTextRef.current) {
+          onNavigate('app');
+          return;
+        }
+        
+        curtainTextRef.current.innerText = "LAUNCHING WORKSPACE";
+        curtainRef.current.classList.add("exit");
+        
+        curtainTextRef.current.animate(
+          [
+            { opacity: 0, transform: "translateY(50px)" },
+            { opacity: 1, transform: "translateY(0)" },
+          ],
+          {
+            duration: 800,
+            delay: 300,
+            easing: "cubic-bezier(0.19, 1, 0.22, 1)",
+            fill: "forwards" as any,
+          }
+        );
+        
+        setTimeout(() => {
+           onNavigate('app');
+        }, 2000);
         return;
       }
       
-      // 1. Set text
+      // If not authenticated, go to signin
+      if (!curtainRef.current || !curtainTextRef.current) {
+        onNavigate('signin');
+        return;
+      }
+      
       curtainTextRef.current.innerText = "LAUNCHING WORKSPACE";
-
-      // 2. Add 'exit' class (Defined in CSS CHANGE 1)
-      // This class covers the screen but DOES NOT animate back to open.
-      // It stays black because of the 'forwards' CSS property.
       curtainRef.current.classList.add("exit");
 
-      // 3. Animate Text In
       curtainTextRef.current.animate(
         [
           { opacity: 0, transform: "translateY(50px)" },
@@ -174,10 +200,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
         }
       );
 
-      // 4. Wait for animation to cover screen, then redirect
-      // The screen will remain black during this "load" until the new page paints
       setTimeout(() => {
-         onNavigate('app');
+         onNavigate('signin');
       }, 2000);
   };
 
@@ -209,6 +233,107 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
             <a className="nav-item" onClick={(e) => handleNavClick(e, 'intelligence')}>Intelligence</a>
             <a className="nav-item" onClick={(e) => handleNavClick(e, 'workflow')}>Workflow</a>
             <a className="nav-item" onClick={(e) => handleNavClick(e, 'vision')}>Vision</a>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          {user ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ 
+                fontSize: '0.9rem', 
+                color: 'var(--text-main)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}>
+                <div style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #7000ff 0%, #00dbde 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontSize: '0.75rem',
+                  fontWeight: 600
+                }}>
+                  {user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                </div>
+                <span>{user.name}</span>
+              </div>
+              <button 
+                onClick={onLogout}
+                style={{
+                  padding: '0.5rem 1rem',
+                  background: 'rgba(255, 107, 107, 0.1)',
+                  border: '1px solid rgba(255, 107, 107, 0.3)',
+                  borderRadius: '8px',
+                  color: '#ff6b6b',
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 107, 107, 0.2)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 107, 107, 0.1)';
+                }}
+              >
+                Logout
+              </button>
+            </div>
+          ) : (
+            <>
+              <button 
+                onClick={() => onNavigate('signin')}
+                style={{
+                  padding: '0.5rem 1rem',
+                  background: 'transparent',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '8px',
+                  color: 'var(--text-main)',
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--accent-primary)';
+                  e.currentTarget.style.background = 'rgba(112, 0, 255, 0.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                  e.currentTarget.style.background = 'transparent';
+                }}
+              >
+                Sign In
+              </button>
+              <button 
+                onClick={() => onNavigate('signup')}
+                style={{
+                  padding: '0.5rem 1rem',
+                  background: 'linear-gradient(135deg, #7000ff 0%, #00dbde 100%)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  color: 'white',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 4px 12px rgba(112, 0, 255, 0.3)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(112, 0, 255, 0.4)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(112, 0, 255, 0.3)';
+                }}
+              >
+                Sign Up
+              </button>
+            </>
+          )}
         </div>
         </nav>
 

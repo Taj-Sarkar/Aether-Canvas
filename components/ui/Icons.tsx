@@ -25,7 +25,15 @@ import {
   Trash,
   Pin,
   Moon,
-  Sun
+  Sun,
+  AlertCircle,
+  Mail,
+  Lock,
+  LogIn,
+  LogOut,
+  ArrowLeft,
+  User,
+  UserPlus
 } from 'lucide-react';
 
 export const Icons = {
@@ -54,5 +62,13 @@ export const Icons = {
   Trash,
   Pin,
   Moon,
-  Sun
+  Sun,
+  AlertCircle,
+  Mail,
+  Lock,
+  LogIn,
+  LogOut,
+  ArrowLeft,
+  User,
+  UserPlus
 };

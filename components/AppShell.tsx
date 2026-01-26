@@ -61,10 +61,11 @@ const AgentCard = ({ agent }: { agent: AgentState }) => {
 // --- Main App Component ---
 
 interface AppShellProps {
-  onLogout?: () => void;
+  user: { id: string; email: string; name: string };
+  onLogout: () => void;
 }
 
-export const AppShell = ({ onLogout }: AppShellProps) => {
+export const AppShell = ({ user, onLogout }: AppShellProps) => {
   // --- State ---
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [activeTab, setActiveTab] = useState<'chat' | 'breakdown' | 'viz' | 'agents' | 'flashcards'>('chat');
@@ -80,9 +81,7 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
   };
   
   const initialWorkspaceData: WorkspaceData = {
-    blocks: [
-      { id: '1', type: BlockType.TEXT, title: 'Project Notes', content: 'Met with the team today regarding the Q4 rollout. \nIssues: \n- Server latency is high during peak hours.\n- The mobile login flow is confusing users.\nAction items:\n- Investigate Redis caching layer.\n- Redesign login UX.' },
-    ],
+    blocks: [],
     chatHistory: [
       { id: '0', role: 'model', content: "Hello! I'm ready to help you organize this workspace.", timestamp: Date.now() }
     ],
@@ -91,21 +90,14 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
     flashcards: [],
   };
   
-  const [workspaceData, setWorkspaceData] = useState<Record<string, WorkspaceData>>({
-    'ws-1': initialWorkspaceData,
-    'ws-2': { ...initialWorkspaceData, blocks: [{ id: '2', type: BlockType.TEXT, title: 'Marketing Ideas', content: 'Brainstorm campaign angles and Q4 promos.' }], chatHistory: [{ id: '0b', role: 'model', content: "Let's plan your marketing ideas.", timestamp: Date.now() }], breakdown: null, visualizations: [], flashcards: [] },
-    'ws-3': { ...initialWorkspaceData, blocks: [{ id: '3', type: BlockType.TEXT, title: 'Personal Notes', content: 'Daily notes and tasks.' }], chatHistory: [{ id: '0c', role: 'model', content: 'Personal workspace ready.', timestamp: Date.now() }], breakdown: null, visualizations: [], flashcards: [] },
-  });
-  
+  const [workspaceData, setWorkspaceData] = useState<Record<string, WorkspaceData>>({});
   const [chatInput, setChatInput] = useState('');
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([
-    { id: 'ws-1', name: 'System Design', icon: 'layers', lastActive: new Date() },
-    { id: 'ws-2', name: 'Q4 Marketing', icon: 'layers', lastActive: new Date() },
-    { id: 'ws-3', name: 'Personal Notes', icon: 'layers', lastActive: new Date() },
-  ]);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string>('ws-1');
   const [workspaceMenuId, setWorkspaceMenuId] = useState<string | null>(null);
   const [blockMenuId, setBlockMenuId] = useState<string | null>(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   
   // Agent States
   const [agents, setAgents] = useState<Record<string, AgentState>>({
@@ -114,6 +106,75 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
     [AgentType.DATA_VIZ]: { type: AgentType.DATA_VIZ, status: AgentStatus.IDLE },
     [AgentType.CODE]: { type: AgentType.CODE, status: AgentStatus.IDLE },
   });
+
+  // Load workspaces from database on mount
+  useEffect(() => {
+    const loadWorkspaces = async () => {
+      try {
+        const { fetchWorkspaces } = await import('../services/workspaceService');
+        const fetchedWorkspaces = await fetchWorkspaces();
+        
+        if (fetchedWorkspaces.length === 0) {
+          // Create initial workspace if none exist
+          const { createWorkspace } = await import('../services/workspaceService');
+          const newWorkspace = await createWorkspace('My First Workspace');
+          setWorkspaces([{ id: newWorkspace.id, name: newWorkspace.name, icon: newWorkspace.icon, lastActive: newWorkspace.lastActive }]);
+          setWorkspaceData({ [newWorkspace.id]: {
+            blocks: newWorkspace.blocks,
+            chatHistory: newWorkspace.chatHistory,
+            breakdown: newWorkspace.breakdown,
+            visualizations: newWorkspace.visualizations,
+            flashcards: newWorkspace.flashcards,
+          }});
+          setActiveWorkspaceId(newWorkspace.id);
+        } else {
+          setWorkspaces(fetchedWorkspaces.map(ws => ({ id: ws.id, name: ws.name, icon: ws.icon, lastActive: ws.lastActive })));
+          const dataMap: Record<string, WorkspaceData> = {};
+          fetchedWorkspaces.forEach(ws => {
+            dataMap[ws.id] = {
+              blocks: ws.blocks,
+              chatHistory: ws.chatHistory,
+              breakdown: ws.breakdown,
+              visualizations: ws.visualizations,
+              flashcards: ws.flashcards,
+            };
+          });
+          setWorkspaceData(dataMap);
+          setActiveWorkspaceId(fetchedWorkspaces[0].id);
+        }
+      } catch (error) {
+        console.error('Failed to load workspaces:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadWorkspaces();
+  }, []);
+
+  // Auto-save workspace changes (debounced)
+  useEffect(() => {
+    if (!activeWorkspaceId || loading) return;
+    
+    const saveTimeout = setTimeout(async () => {
+      try {
+        const { updateWorkspace } = await import('../services/workspaceService');
+        const data = workspaceData[activeWorkspaceId];
+        if (data) {
+          await updateWorkspace(activeWorkspaceId, {
+            blocks: data.blocks,
+            chatHistory: data.chatHistory,
+            breakdown: data.breakdown,
+            visualizations: data.visualizations,
+            flashcards: data.flashcards,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to auto-save workspace:', error);
+      }
+    }, 1000); // Debounce 1 second
+
+    return () => clearTimeout(saveTimeout);
+  }, [workspaceData, activeWorkspaceId, loading]);
 
   // Theme effect
   useEffect(() => {
@@ -147,38 +208,48 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
     }));
   };
 
-  const handleCreateWorkspace = () => {
+  const handleCreateWorkspace = async () => {
     const name = window.prompt('Workspace name?');
     if (!name || !name.trim()) return;
-    const newWorkspace: Workspace = {
-      id: Date.now().toString(),
-      name: name.trim(),
-      icon: 'layers',
-      lastActive: new Date(),
-    };
-    setWorkspaces(prev => [...prev, newWorkspace]);
-    setWorkspaceData(prev => ({
-      ...prev,
-      [newWorkspace.id]: {
-        blocks: [],
-        chatHistory: [{ id: `${Date.now()}-greet`, role: 'model', content: 'New workspace ready. Add notes or ask anything.', timestamp: Date.now() }],
-        breakdown: null,
-        visualizations: [],
-        flashcards: [],
-      },
-    }));
-    setActiveWorkspaceId(newWorkspace.id);
+    
+    try {
+      const { createWorkspace } = await import('../services/workspaceService');
+      const newWorkspace = await createWorkspace(name.trim());
+      setWorkspaces(prev => [...prev, { id: newWorkspace.id, name: newWorkspace.name, icon: newWorkspace.icon, lastActive: newWorkspace.lastActive }]);
+      setWorkspaceData(prev => ({
+        ...prev,
+        [newWorkspace.id]: {
+          blocks: newWorkspace.blocks,
+          chatHistory: newWorkspace.chatHistory,
+          breakdown: newWorkspace.breakdown,
+          visualizations: newWorkspace.visualizations,
+          flashcards: newWorkspace.flashcards,
+        },
+      }));
+      setActiveWorkspaceId(newWorkspace.id);
+    } catch (error) {
+      console.error('Failed to create workspace:', error);
+      alert('Failed to create workspace. Please try again.');
+    }
   };
 
-  const handleRenameWorkspace = (id: string) => {
+  const handleRenameWorkspace = async (id: string) => {
     const ws = workspaces.find(w => w.id === id);
     if (!ws) return;
     const name = window.prompt('Rename workspace', ws.name);
     if (name === null || !name.trim()) return;
-    setWorkspaces(prev => prev.map(w => (w.id === id ? { ...w, name: name.trim() } : w)));
+    
+    try {
+      const { updateWorkspace } = await import('../services/workspaceService');
+      await updateWorkspace(id, { name: name.trim() });
+      setWorkspaces(prev => prev.map(w => (w.id === id ? { ...w, name: name.trim() } : w)));
+    } catch (error) {
+      console.error('Failed to rename workspace:', error);
+      alert('Failed to rename workspace. Please try again.');
+    }
   };
 
-  const handleDeleteWorkspace = (id: string) => {
+  const handleDeleteWorkspace = async (id: string) => {
     const ws = workspaces.find(w => w.id === id);
     if (!ws) return;
     if (workspaces.length <= 1) {
@@ -186,10 +257,18 @@ export const AppShell = ({ onLogout }: AppShellProps) => {
       return;
     }
     if (!window.confirm(`Delete workspace "${ws.name}"?`)) return;
-    const next = workspaces.filter(w => w.id !== id);
-    setWorkspaces(next);
-    if (activeWorkspaceId === id) {
-      setActiveWorkspaceId(next[0]?.id || '');
+    
+    try {
+      const { deleteWorkspace } = await import('../services/workspaceService');
+      await deleteWorkspace(id);
+      const next = workspaces.filter(w => w.id !== id);
+      setWorkspaces(next);
+      if (activeWorkspaceId === id) {
+        setActiveWorkspaceId(next[0]?.id || '');
+      }
+    } catch (error) {
+      console.error('Failed to delete workspace:', error);
+      alert('Failed to delete workspace. Please try again.');
     }
   };
 
@@ -568,7 +647,7 @@ Return raw code only.`;
         {/* LEFT SIDEBAR */}
         <aside className="sidebar-left glass-panel">
           <div>
-            <div className="brand" onClick={onLogout} style={{ cursor: 'pointer' }}>
+            <div className="brand" style={{ cursor: 'default' }}>
               <div className="brand-icon"><Icons.Brain size={18} /></div>
               <span>Aether Canvas</span>
             </div>
@@ -629,15 +708,109 @@ Return raw code only.`;
             </div>
           </div>
 
-          <div className="user-profile">
-            <div className="avatar">JD</div>
+          <div 
+            className="user-profile" 
+            onClick={() => setUserMenuOpen(!userMenuOpen)}
+            style={{ cursor: 'pointer', position: 'relative' }}
+          >
+            <div className="avatar">{user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}</div>
             <div className="user-info">
-              <div className="user-name">John Doe</div>
-              
+              <div className="user-name">{user.name}</div>
             </div>
-            <div className="theme-toggle" onClick={toggleTheme} title="Toggle Theme">
+            <div className="theme-toggle" onClick={(e) => { e.stopPropagation(); toggleTheme(); }} title="Toggle Theme">
               {theme === 'dark' ? <Icons.Moon size={16} /> : <Icons.Sun size={16} />}
             </div>
+            
+            {userMenuOpen && (
+              <div style={{
+                position: 'absolute',
+                bottom: '100%',
+                left: '0',
+                width: '100%',
+                marginBottom: '10px',
+                background: 'var(--app-panel-bg)',
+                border: '1px solid var(--app-panel-border)',
+                borderRadius: '12px',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+                padding: '8px',
+                zIndex: 100,
+                backdropFilter: 'blur(10px)',
+                animation: 'fadeUp 0.2s ease-out'
+              }} onClick={e => e.stopPropagation()}>
+                
+                {/* Profile Section */}
+                <div style={{ 
+                  padding: '12px', 
+                  marginBottom: '8px', 
+                  background: 'rgba(255,255,255,0.03)', 
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px'
+                }}>
+                   <div style={{
+                     width: '36px',
+                     height: '36px',
+                     borderRadius: '50%',
+                     background: 'linear-gradient(135deg, var(--app-accent-primary), var(--app-accent-secondary))',
+                     display: 'flex',
+                     alignItems: 'center',
+                     justifyContent: 'center',
+                     color: 'white',
+                     fontWeight: 'bold'
+                   }}>
+                     {user.name.charAt(0).toUpperCase()}
+                   </div>
+                   <div style={{ overflow: 'hidden' }}>
+                     <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--app-text-main)' }}>{user.name}</div>
+                     <div style={{ fontSize: '0.75rem', color: 'var(--app-text-muted)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{user.email}</div>
+                   </div>
+                </div>
+
+                <div 
+                  className="menu-item"
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    color: 'var(--app-text-main)',
+                    transition: 'background 0.2s',
+                    fontSize: '0.9rem'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                  onClick={() => alert('Profile settings coming soon!')}
+                >
+                  <Icons.User size={16} />
+                  <span>My Profile</span>
+                </div>
+
+                <div 
+                  className="menu-item"
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    color: '#ff6b6b',
+                    transition: 'background 0.2s',
+                    fontSize: '0.9rem',
+                    marginTop: '4px'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 107, 107, 0.1)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                  onClick={() => onLogout()}
+                >
+                  <Icons.LogOut size={16} />
+                  <span>Log Out</span>
+                </div>
+              </div>
+            )}
           </div>
         </aside>
 
