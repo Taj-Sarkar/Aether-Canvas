@@ -100,6 +100,8 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  bio?: string;
+  banner?: string;
 }
 
 // View routing options including authentication

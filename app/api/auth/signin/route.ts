@@ -48,6 +48,8 @@ export async function POST(req: NextRequest) {
         id: user._id.toString(),
         email: user.email,
         name: user.name,
+        bio: user.bio,
+        banner: user.banner,
       },
     });
   } catch (error: any) {

@@ -2,6 +2,8 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  bio?: string;
+  banner?: string;
 }
 
 export interface AuthResponse {
@@ -126,4 +128,27 @@ export const verifyAuth = async (): Promise<{ success: boolean; user?: User; err
 export const logout = (): void => {
   removeToken();
   removeStoredUser();
+};
+
+export const updateProfile = async (data: { name: string; bio: string; banner: string }): Promise<AuthResponse> => {
+  try {
+    const res = await fetch('/api/user/update', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        ...getAuthHeaders() 
+      } as HeadersInit,
+      body: JSON.stringify(data),
+    });
+
+    const responseData = await res.json();
+
+    if (responseData.success && responseData.user) {
+      setStoredUser(responseData.user);
+    }
+
+    return responseData;
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Failed to update user' };
+  }
 };

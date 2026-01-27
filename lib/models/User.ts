@@ -5,6 +5,8 @@ export interface IUser {
   email: string;
   password: string;
   name: string;
+  bio?: string;
+  banner?: string;
   createdAt: Date;
 }
 
@@ -25,11 +27,25 @@ const UserSchema = new Schema<IUser>({
     required: true,
     trim: true,
   },
+  bio: {
+    type: String,
+    default: '',
+  },
+  banner: {
+    type: String,
+    default: '',
+  },
   createdAt: {
     type: Date,
     default: Date.now,
   },
 });
+
+// Force recompilation in dev to ensure new fields (bio, banner) are picked up
+// This is necessary because Mongoose caches models and doesn't update them on hot reload
+if (process.env.NODE_ENV === 'development' && mongoose.models.User) {
+  delete mongoose.models.User;
+}
 
 const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
 

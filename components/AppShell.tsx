@@ -62,7 +62,7 @@ const AgentCard = ({ agent }: { agent: AgentState }) => {
 // --- Main App Component ---
 
 interface AppShellProps {
-  user: { id: string; email: string; name: string };
+  user: { id: string; email: string; name: string; bio?: string; banner?: string };
   onLogout: () => void;
 }
 
@@ -76,8 +76,8 @@ export const AppShell = ({ user, onLogout }: AppShellProps) => {
   const [userProfile, setUserProfile] = useState({
     name: user.name,
     email: user.email,
-    banner: '',
-    bio: 'Creative Explorer'
+    banner: user.banner || '',
+    bio: user.bio || 'Creative Explorer'
   });
   
   type WorkspaceData = {
@@ -114,6 +114,16 @@ export const AppShell = ({ user, onLogout }: AppShellProps) => {
     [AgentType.DATA_VIZ]: { type: AgentType.DATA_VIZ, status: AgentStatus.IDLE },
     [AgentType.CODE]: { type: AgentType.CODE, status: AgentStatus.IDLE },
   });
+
+  // Sync state with user prop (important for re-login or background updates)
+  useEffect(() => {
+    setUserProfile({
+      name: user.name,
+      email: user.email,
+      banner: user.banner || '',
+      bio: user.bio || 'Creative Explorer'
+    });
+  }, [user]);
 
   // Load workspaces from database on mount
   useEffect(() => {
@@ -643,8 +653,31 @@ Return raw code only.`;
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
   };
 
-  const handleUpdateProfile = (data: { name: string; bio: string; banner: string }) => {
+  const handleUpdateProfile = async (data: { name: string; bio: string; banner: string }) => {
+    // 1. Optimistic UI update
     setUserProfile(prev => ({ ...prev, ...data }));
+
+    try {
+      // 2. Persist to backend
+      const { updateProfile } = await import('../services/authService');
+      const response = await updateProfile(data);
+      
+      if (response.success && response.user) {
+        // 3. Confirm with server data
+        setUserProfile({
+          name: response.user.name,
+          email: response.user.email,
+          banner: response.user.banner || '',
+          bio: response.user.bio || ''
+        });
+      } else {
+        // Revert (or alert) on failure
+        console.error('Failed to save profile:', response.error);
+        alert('Failed to save profile changes. Please try again.');
+      }
+    } catch (error) {
+       console.error('Error updating profile:', error);
+    }
   };
 
   return (
