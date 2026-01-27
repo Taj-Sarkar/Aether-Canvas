@@ -4,6 +4,7 @@ export interface User {
   name: string;
   bio?: string;
   banner?: string;
+  avatar?: string;
 }
 
 export interface AuthResponse {
@@ -130,7 +131,7 @@ export const logout = (): void => {
   removeStoredUser();
 };
 
-export const updateProfile = async (data: { name: string; bio: string; banner: string }): Promise<AuthResponse> => {
+export const updateProfile = async (data: { name: string; bio: string; banner: string; avatar: string }): Promise<AuthResponse> => {
   try {
     const res = await fetch('/api/user/update', {
       method: 'POST',

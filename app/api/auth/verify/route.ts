@@ -42,6 +42,7 @@ export async function GET(req: NextRequest) {
         name: user.name,
         bio: user.bio,
         banner: user.banner,
+        avatar: user.avatar,
       },
     });
   } catch (error: any) {

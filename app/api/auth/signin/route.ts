@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
         name: user.name,
         bio: user.bio,
         banner: user.banner,
+        avatar: user.avatar,
       },
     });
   } catch (error: any) {

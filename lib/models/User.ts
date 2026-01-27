@@ -7,6 +7,7 @@ export interface IUser {
   name: string;
   bio?: string;
   banner?: string;
+  avatar?: string;
   createdAt: Date;
 }
 
@@ -32,6 +33,10 @@ const UserSchema = new Schema<IUser>({
     default: '',
   },
   banner: {
+    type: String,
+    default: '',
+  },
+  avatar: {
     type: String,
     default: '',
   },

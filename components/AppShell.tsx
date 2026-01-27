@@ -62,7 +62,7 @@ const AgentCard = ({ agent }: { agent: AgentState }) => {
 // --- Main App Component ---
 
 interface AppShellProps {
-  user: { id: string; email: string; name: string; bio?: string; banner?: string };
+  user: { id: string; email: string; name: string; bio?: string; banner?: string; avatar?: string };
   onLogout: () => void;
 }
 
@@ -77,7 +77,8 @@ export const AppShell = ({ user, onLogout }: AppShellProps) => {
     name: user.name,
     email: user.email,
     banner: user.banner || '',
-    bio: user.bio || 'Creative Explorer'
+    bio: user.bio || 'Creative Explorer',
+    avatar: user.avatar || ''
   });
   
   type WorkspaceData = {
@@ -121,7 +122,8 @@ export const AppShell = ({ user, onLogout }: AppShellProps) => {
       name: user.name,
       email: user.email,
       banner: user.banner || '',
-      bio: user.bio || 'Creative Explorer'
+      bio: user.bio || 'Creative Explorer',
+      avatar: user.avatar || ''
     });
   }, [user]);
 
@@ -653,7 +655,7 @@ Return raw code only.`;
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
   };
 
-  const handleUpdateProfile = async (data: { name: string; bio: string; banner: string }) => {
+  const handleUpdateProfile = async (data: { name: string; bio: string; banner: string; avatar: string }) => {
     // 1. Optimistic UI update
     setUserProfile(prev => ({ ...prev, ...data }));
 
@@ -668,7 +670,8 @@ Return raw code only.`;
           name: response.user.name,
           email: response.user.email,
           banner: response.user.banner || '',
-          bio: response.user.bio || ''
+          bio: response.user.bio || '',
+          avatar: response.user.avatar || ''
         });
       } else {
         // Revert (or alert) on failure
@@ -758,7 +761,13 @@ Return raw code only.`;
             onClick={() => setUserMenuOpen(!userMenuOpen)}
             style={{ cursor: 'pointer', position: 'relative' }}
           >
-            <div className="avatar">{user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}</div>
+            <div className="avatar" style={{ overflow: 'hidden' }}>
+              {userProfile.avatar ? (
+                <img src={userProfile.avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+              )}
+            </div>
             <div className="user-info">
               <div className="user-name">{userProfile.name}</div>
             </div>
@@ -1361,7 +1370,13 @@ Return raw code only.`;
       <ProfileModal 
         isOpen={isProfileOpen} 
         onClose={() => setIsProfileOpen(false)}
-        user={userProfile}
+        user={{
+          name: userProfile.name,
+          email: userProfile.email,
+          banner: userProfile.banner,
+          bio: userProfile.bio,
+          avatar: userProfile.avatar
+        }}
         onUpdateUser={handleUpdateProfile}
       />
     </div>

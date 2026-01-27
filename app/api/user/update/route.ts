@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
 
     // Get Data
     const data = await req.json();
-    const { name, bio, banner } = data;
+    const { name, bio, banner, avatar } = data;
 
     // Validate
     if (!name) {
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     // Update
     const user = await User.findByIdAndUpdate(
       payload.userId,
-      { name, bio, banner },
+      { name, bio, banner, avatar },
       { new: true, runValidators: true }
     ).select('-password');
 
@@ -48,6 +48,7 @@ export async function POST(req: NextRequest) {
         name: user.name,
         bio: user.bio,
         banner: user.banner,
+        avatar: user.avatar,
       },
     });
 

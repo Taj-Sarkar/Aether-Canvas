@@ -9,12 +9,14 @@ export interface ProfileViewProps {
   bio: string;
   banner: string;
   email: string;
+  avatar: string;
   isEditingBanner: boolean;
   setName: (val: string) => void;
   setBio: (val: string) => void;
   setBanner: (val: string) => void;
   toggleBannerEdit: () => void;
   onBannerUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onAvatarUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   bannerPresets: string[];
 }
 
@@ -25,12 +27,14 @@ export const ProfileUI: React.FC<ProfileViewProps> = ({
   bio,
   banner,
   email,
+  avatar,
   isEditingBanner,
   setName,
   setBio,
   setBanner,
   toggleBannerEdit,
   onBannerUpload,
+  onAvatarUpload,
   bannerPresets
 }) => {
   return (
@@ -82,8 +86,16 @@ export const ProfileUI: React.FC<ProfileViewProps> = ({
             <div className="profile-body">
                 <div className="avatar-section">
                     <div className="avatar-ring">
-                        <div className="avatar-xl">
-                            {name.charAt(0).toUpperCase()}
+                        <div className="avatar-xl" style={{ overflow: 'hidden', position: 'relative' }}>
+                            {avatar ? (
+                                <img src={avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                                name.charAt(0).toUpperCase()
+                            )}
+                            <label className="avatar-edit-overlay">
+                                <Icons.Camera size={20} />
+                                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={onAvatarUpload} />
+                            </label>
                         </div>
                     </div>
                 </div>

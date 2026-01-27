@@ -102,6 +102,7 @@ export interface User {
   name: string;
   bio?: string;
   banner?: string;
+  avatar?: string;
 }
 
 // View routing options including authentication

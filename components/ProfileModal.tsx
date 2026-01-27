@@ -4,8 +4,8 @@ import { ProfileUI } from './ProfileUI';
 interface ProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
-  user: { name: string; email: string; banner?: string; bio?: string };
-  onUpdateUser: (data: { name: string; bio: string; banner: string }) => void;
+  user: { name: string; email: string; banner?: string; bio?: string; avatar?: string };
+  onUpdateUser: (data: { name: string; bio: string; banner: string; avatar: string }) => void;
 }
 
 const BANNER_PRESETS = [
@@ -23,6 +23,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, use
   const [name, setName] = useState(user.name);
   const [bio, setBio] = useState(user.bio || '');
   const [banner, setBanner] = useState(user.banner || BANNER_PRESETS[0]);
+  const [avatar, setAvatar] = useState(user.avatar || '');
   const [isEditingBanner, setIsEditingBanner] = useState(false);
 
   useEffect(() => {
@@ -30,13 +31,14 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, use
         setName(user.name);
         setBio(user.bio || '');
         setBanner(user.banner || BANNER_PRESETS[0]);
+        setAvatar(user.avatar || '');
     }
   }, [isOpen, user]);
 
   if (!isOpen) return null;
 
   const handleSave = () => {
-    onUpdateUser({ name, bio, banner });
+    onUpdateUser({ name, bio, banner, avatar });
     onClose();
   };
 
@@ -51,6 +53,17 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, use
     }
   };
 
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setAvatar(`${ev.target?.result}`);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   return (
     <ProfileUI
       onClose={onClose}
@@ -60,6 +73,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, use
       bio={bio}
       banner={banner}
       email={user.email}
+      avatar={avatar}
       
       isEditingBanner={isEditingBanner}
       
@@ -68,6 +82,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, use
       setBanner={setBanner}
       toggleBannerEdit={() => setIsEditingBanner(!isEditingBanner)}
       onBannerUpload={handleBannerUpload}
+      onAvatarUpload={handleAvatarUpload}
       
       bannerPresets={BANNER_PRESETS}
     />
