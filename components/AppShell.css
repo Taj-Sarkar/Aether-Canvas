@@ -594,7 +594,8 @@
 .send-btn {
   position: absolute;
   right: 8px;
-  bottom: 8px;
+  top: 50%;
+  transform: translateY(-50%);
   width: 32px;
   height: 32px;
   background: var(--app-accent-primary);
@@ -605,7 +606,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
 }
+
+.send-btn svg {
+  /* Optical alignment for the Send icon */
+  transform: translateX(-8px) translateY(1px);
+}
+
+
+
 
 /* Markdown Content Styling */
 .markdown-content h1, 
