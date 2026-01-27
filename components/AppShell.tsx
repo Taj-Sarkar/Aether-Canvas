@@ -2,6 +2,7 @@
 import React, { useState, useEffect, type ChangeEvent } from 'react';
 import { Icons } from './ui/Icons';
 import './AppShell.css';
+import { ProfileModal } from './ProfileModal';
 import { 
   AgentState, AgentType, AgentStatus, 
   CanvasBlock, BlockType, TextBlock, ImageBlock, DatasetBlock, 
@@ -71,6 +72,13 @@ export const AppShell = ({ user, onLogout }: AppShellProps) => {
   const [activeTab, setActiveTab] = useState<'chat' | 'breakdown' | 'viz' | 'agents' | 'flashcards'>('chat');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingFlashcards, setIsGeneratingFlashcards] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [userProfile, setUserProfile] = useState({
+    name: user.name,
+    email: user.email,
+    banner: '',
+    bio: 'Creative Explorer'
+  });
   
   type WorkspaceData = {
     blocks: CanvasBlock[];
@@ -635,6 +643,10 @@ Return raw code only.`;
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
   };
 
+  const handleUpdateProfile = (data: { name: string; bio: string; banner: string }) => {
+    setUserProfile(prev => ({ ...prev, ...data }));
+  };
+
   return (
   <div className="app-shell-root">
       {/* Background Elements */}
@@ -715,7 +727,7 @@ Return raw code only.`;
           >
             <div className="avatar">{user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}</div>
             <div className="user-info">
-              <div className="user-name">{user.name}</div>
+              <div className="user-name">{userProfile.name}</div>
             </div>
             <div className="theme-toggle" onClick={(e) => { e.stopPropagation(); toggleTheme(); }} title="Toggle Theme">
               {theme === 'dark' ? <Icons.Moon size={16} /> : <Icons.Sun size={16} />}
@@ -762,7 +774,7 @@ Return raw code only.`;
                      {user.name.charAt(0).toUpperCase()}
                    </div>
                    <div style={{ overflow: 'hidden' }}>
-                     <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--app-text-main)' }}>{user.name}</div>
+                     <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--app-text-main)' }}>{userProfile.name}</div>
                      <div style={{ fontSize: '0.75rem', color: 'var(--app-text-muted)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{user.email}</div>
                    </div>
                 </div>
@@ -782,7 +794,7 @@ Return raw code only.`;
                   }}
                   onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
                   onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                  onClick={() => alert('Profile settings coming soon!')}
+                  onClick={() => { setUserMenuOpen(false); setIsProfileOpen(true); }}
                 >
                   <Icons.User size={16} />
                   <span>My Profile</span>
@@ -1312,6 +1324,13 @@ Return raw code only.`;
 
         </aside>
       </div>
+
+      <ProfileModal 
+        isOpen={isProfileOpen} 
+        onClose={() => setIsProfileOpen(false)}
+        user={userProfile}
+        onUpdateUser={handleUpdateProfile}
+      />
     </div>
   );
 };

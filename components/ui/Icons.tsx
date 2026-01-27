@@ -33,7 +33,11 @@ import {
   LogOut,
   ArrowLeft,
   User,
-  UserPlus
+  UserPlus,
+  X,
+  Camera,
+  Check,
+  Edit2
 } from 'lucide-react';
 
 export const Icons = {
@@ -70,5 +74,9 @@ export const Icons = {
   LogOut,
   ArrowLeft,
   User,
-  UserPlus
+  UserPlus,
+  X,
+  Camera,
+  Check,
+  Edit: Edit2
 };

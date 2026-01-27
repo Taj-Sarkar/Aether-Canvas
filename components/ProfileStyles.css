@@ -1,0 +1,335 @@
+/* --- ANIMATIONS --- */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* --- LAYOUT --- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.profile-modal-container {
+  width: 100%;
+  max-width: 600px;
+  height: 90vh; /* Floating card style */
+  background: var(--app-bg-color); /* Fallback */
+  background: linear-gradient(to bottom, rgba(20, 20, 25, 0.95), rgba(10, 10, 12, 0.98));
+  border: 1px solid var(--app-panel-border);
+  border-radius: 24px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- SCROLL AREA --- */
+.profile-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Hide scrollbar visually but keep functionality */
+  scrollbar-width: thin;
+  scrollbar-color: var(--app-panel-border) transparent;
+}
+
+/* --- BANNER --- */
+.banner-wrapper {
+  position: relative;
+  height: 200px;
+  width: 100%;
+}
+
+.banner-image {
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  transition: 0.5s ease;
+}
+
+.banner-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(0,0,0,0) 50%, var(--app-bg-color) 100%);
+}
+
+.banner-toggle-btn {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: 0.2s;
+  z-index: 10;
+}
+
+.banner-toggle-btn:hover, .banner-toggle-btn.active {
+  background: #fff;
+  color: #000;
+}
+
+/* --- BANNER PICKER --- */
+.banner-picker-section {
+  height: 0;
+  overflow: hidden;
+  background: rgba(0,0,0,0.2);
+  transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-bottom: 1px solid transparent;
+}
+
+.banner-picker-section.open {
+  height: 110px;
+  border-bottom-color: var(--app-panel-border);
+}
+
+.picker-grid {
+  display: flex;
+  gap: 12px;
+  padding: 20px;
+  overflow-x: auto;
+}
+
+.picker-item {
+  width: 80px;
+  height: 60px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: 0.2s;
+  position: relative;
+}
+
+.picker-item.upload {
+  background: var(--app-input-bg);
+  border: 1px dashed var(--app-text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--app-text-muted);
+  font-size: 0.65rem;
+}
+
+.picker-item.upload input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.picker-item:hover { transform: scale(1.05); }
+.picker-item.selected { 
+  border-color: var(--app-accent-secondary); 
+  box-shadow: 0 0 15px rgba(0, 219, 222, 0.2);
+}
+
+/* --- ACTIONS TOP --- */
+.profile-top-actions {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 20;
+}
+
+.icon-btn-glass {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.icon-btn-glass:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: rotate(90deg);
+}
+
+/* --- BODY & AVATAR --- */
+.profile-body {
+  padding: 0 32px;
+  margin-top: -50px; /* Pull avatar up into banner */
+  position: relative;
+  z-index: 5;
+}
+
+.avatar-section {
+  display: flex;
+  justify-content: center; /* Center align for card look */
+  margin-bottom: 24px;
+}
+
+.avatar-ring {
+  padding: 4px;
+  background: var(--app-bg-color);
+  border-radius: 50%;
+}
+
+.avatar-xl {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--app-accent-primary), var(--app-accent-secondary));
+  color: #fff;
+  font-size: 2.5rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.2);
+}
+
+/* --- FORMS --- */
+/* --- FORMS --- */
+.form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  animation: fadeInUp 0.4s ease forwards;
+}
+
+.input-group label {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--app-text-muted);
+  margin-bottom: 8px;
+  font-weight: 500;
+  margin-left: 4px;
+}
+
+.profile-input-wrapper {
+  position: relative;
+  background: var(--app-input-bg);
+  border: 1px solid var(--app-panel-border);
+  border-radius: 12px;
+  transition: 0.2s;
+  display: flex;
+  align-items: center;
+}
+
+.profile-input-wrapper:focus-within {
+  border-color: var(--app-accent-primary);
+  background: rgba(112, 0, 255, 0.05);
+  box-shadow: 0 0 0 3px rgba(112, 0, 255, 0.1);
+}
+
+.input-icon {
+  position: absolute;
+  left: 14px;
+  color: var(--app-text-muted);
+  pointer-events: none;
+}
+
+.input-icon.top {
+  top: 14px;
+}
+
+.profile-input-wrapper input,
+.profile-input-wrapper textarea {
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 14px 14px 14px 44px; /* Space for icon */
+  color: var(--app-text-main);
+  font-size: 0.95rem;
+  outline: none;
+  font-family: inherit;
+}
+
+.profile-input-wrapper textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.profile-input-wrapper.disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  background: rgba(0,0,0,0.2);
+}
+
+.badge {
+  font-size: 0.7rem;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin-right: 10px;
+  color: var(--app-text-muted);
+}
+
+/* --- FOOTER --- */
+.profile-footer {
+  padding: 20px 32px;
+  border-top: 1px solid var(--app-panel-border);
+  background: rgba(20, 20, 25, 0.8);
+  backdrop-filter: blur(10px);
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  z-index: 20;
+}
+
+.btn-text {
+  background: none;
+  border: none;
+  color: var(--app-text-muted);
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 8px 16px;
+  border-radius: 8px;
+  transition: 0.2s;
+}
+
+.btn-text:hover { color: var(--app-text-main); background: var(--app-input-bg); }
+
+.btn-primary-glow {
+  background: linear-gradient(135deg, var(--app-accent-primary), #4a00e0);
+  border: none;
+  color: #fff;
+  padding: 10px 24px;
+  border-radius: 10px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 15px rgba(112, 0, 255, 0.3);
+  transition: 0.2s;
+}
+
+.btn-primary-glow:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(112, 0, 255, 0.4);
+}
