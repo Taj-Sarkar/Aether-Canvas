@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Icons } from './ui/Icons';
-import './SignIn.css'; // Reuse same styles
+import './SignIn.css'; // Uses the new Tech CSS
 import type { AppView, User } from '../types';
 
 interface SignUpProps {
@@ -22,14 +22,12 @@ export const SignUp: React.FC<SignUpProps> = ({ onNavigate, onSignUpSuccess }) =
     e.preventDefault();
     setError('');
 
-    // Validation
     if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError('Password sequence too short (min 6 chars)');
       return;
     }
-
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setError('Access keys do not match');
       return;
     }
 
@@ -42,10 +40,10 @@ export const SignUp: React.FC<SignUpProps> = ({ onNavigate, onSignUpSuccess }) =
       if (result.success && result.user) {
         onSignUpSuccess(result.user);
       } else {
-        setError(result.error || 'Failed to create account');
+        setError(result.error || 'Registration failed');
       }
     } catch (err: any) {
-      setError(err.message || 'An error occurred');
+      setError(err.message || 'System error occurred');
     } finally {
       setLoading(false);
     }
@@ -53,130 +51,119 @@ export const SignUp: React.FC<SignUpProps> = ({ onNavigate, onSignUpSuccess }) =
 
   return (
     <div className="auth-page-root">
-      <div className="ambient-mesh">
-        <div className="orb orb-1"></div>
-        <div className="orb orb-2"></div>
+      {/* LEFT SIDE: VISUAL */}
+      <div className="auth-visual-side">
+        <div className="visual-logo">
+          <span style={{ color: '#7000ff' }}>❖</span> AETHER
+        </div>
+        <div className="visual-content">
+          <h1 className="visual-heading">Expand<br />Your Mind.</h1>
+          <p className="visual-quote">
+            "Intelligence is the ability to adapt to change."
+            <br />— Building your second brain starts here.
+          </p>
+        </div>
+        <div style={{ fontSize: '0.8rem', opacity: 0.5, fontFamily: 'monospace' }}>
+          NEW_USER_PROTOCOL // INIT
+        </div>
       </div>
 
-      <div className="auth-container">
-        <div className="auth-card glass-panel">
-          <div className="auth-header">
-            <div className="auth-logo">
-              <Icons.Brain size={32} />
-            </div>
-            <h1 className="auth-title">Create Account</h1>
-            <p className="auth-subtitle">Join Aether Canvas and start organizing your thoughts</p>
+      {/* RIGHT SIDE: FORM */}
+      <div className="auth-form-side">
+        <div className="auth-header">
+          <h2 className="auth-title">Registration</h2>
+          <p className="auth-subtitle">Create your digital identity.</p>
+        </div>
+
+        {error && (
+          <div className="auth-error">
+            <Icons.AlertCircle size={16} />
+            <span>{error}</span>
           </div>
+        )}
 
-          {error && (
-            <div className="auth-error">
-              <Icons.AlertCircle size={16} />
-              <span>{error}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="auth-form">
-            <div className="form-group">
-              <label htmlFor="name">Full Name</label>
-              <div className="input-wrapper">
-                <Icons.User size={18} />
-                <input
-                  id="name"
-                  type="text"
-                  placeholder="John Doe"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  disabled={loading}
-                />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="email">Email</label>
-              <div className="input-wrapper">
-                <Icons.Mail size={18} />
-                <input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  disabled={loading}
-                />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="password">Password</label>
-              <div className="input-wrapper">
-                <Icons.Lock size={18} />
-                <input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  disabled={loading}
-                  minLength={6}
-                />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="confirmPassword">Confirm Password</label>
-              <div className="input-wrapper">
-                <Icons.Lock size={18} />
-                <input
-                  id="confirmPassword"
-                  type="password"
-                  placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  disabled={loading}
-                  minLength={6}
-                />
-              </div>
-            </div>
-
-            <button type="submit" className="auth-button" disabled={loading}>
-              {loading ? (
-                <>
-                  <div className="spinner"></div>
-                  Creating account...
-                </>
-              ) : (
-                <>
-                  <Icons.UserPlus size={18} />
-                  Sign Up
-                </>
-              )}
-            </button>
-          </form>
-
-          <div className="auth-footer">
-            <p>
-              Already have an account?{' '}
-              <button
-                onClick={() => onNavigate('signin')}
-                className="auth-link"
+        <form onSubmit={handleSubmit} className="auth-form">
+          <div className="form-group">
+            <label htmlFor="name">Designation (Full Name)</label>
+            <div className="input-wrapper">
+              <input
+                id="name"
+                type="text"
+                placeholder="JOHN DOE"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
                 disabled={loading}
-              >
-                Sign In
-              </button>
-            </p>
-            <button
-              onClick={() => onNavigate('landing')}
-              className="auth-link back-link"
-              disabled={loading}
-            >
-              <Icons.ArrowLeft size={14} />
-              Back to Home
-            </button>
+              />
+              <div className="input-icon"><Icons.User size={16} /></div>
+            </div>
           </div>
+
+          <div className="form-group">
+            <label htmlFor="email">Communication Link (Email)</label>
+            <div className="input-wrapper">
+              <input
+                id="email"
+                type="email"
+                placeholder="USER@DOMAIN.COM"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={loading}
+              />
+              <div className="input-icon"><Icons.Mail size={16} /></div>
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="password">Set Access Key</label>
+            <div className="input-wrapper">
+              <input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={loading}
+                minLength={6}
+              />
+              <div className="input-icon"><Icons.Lock size={16} /></div>
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="confirmPassword">Verify Access Key</label>
+            <div className="input-wrapper">
+              <input
+                id="confirmPassword"
+                type="password"
+                placeholder="••••••••"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                disabled={loading}
+                minLength={6}
+              />
+              <div className="input-icon"><Icons.Check size={16} /></div>
+            </div>
+          </div>
+
+          <button type="submit" className="auth-button" disabled={loading}>
+            {loading ? <div className="spinner"></div> : 'ESTABLISH LINK'}
+          </button>
+        </form>
+
+        <div className="auth-footer">
+          <p>
+            Already connected? 
+            <button onClick={() => onNavigate('signin')} className="link-highlight" disabled={loading}>
+              Log In
+            </button>
+          </p>
+          <button onClick={() => onNavigate('landing')} className="back-link" disabled={loading}>
+             ESC / HOME
+          </button>
         </div>
       </div>
     </div>
