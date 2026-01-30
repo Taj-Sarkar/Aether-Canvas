@@ -221,6 +221,204 @@
   100% { transform: scaleY(1); transform-origin: bottom; }
 }
 
+
+/* Updated Nav bar */
+.landing-page-root .tech-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 80px; /* Taller initial state */
+  display: grid;
+  grid-template-columns: 1fr auto 1fr; /* Left, Center, Right */
+  align-items: center;
+  padding: 0 3rem;
+  z-index: 1000;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  
+  /* Initial transparent state */
+  background: transparent;
+  border-bottom: 1px solid transparent;
+}
+
+/* Scrolled State: Compressed & Frosted */
+.landing-page-root .tech-nav.scrolled {
+  height: 60px;
+  background: rgba(5, 5, 7, 0.85); /* Dark background */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* --- LEFT: LOGO --- */
+.landing-page-root .nav-left {
+  justify-self: start;
+}
+
+.landing-page-root .nav-logo {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-transform: uppercase;
+}
+
+.landing-page-root .logo-symbol {
+  color: var(--accent-secondary);
+  font-size: 1.1rem;
+  animation: pulseSymbol 3s infinite;
+}
+
+@keyframes pulseSymbol {
+  0%, 100% { opacity: 1; text-shadow: 0 0 10px var(--accent-secondary); }
+  50% { opacity: 0.5; text-shadow: none; }
+}
+
+/* --- CENTER: LINKS --- */
+.landing-page-root .nav-center {
+  display: flex;
+  gap: 3rem;
+}
+
+.landing-page-root .nav-link {
+  font-family: "Inter", sans-serif;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--text-muted);
+  position: relative;
+  padding: 0.5rem 0;
+  transition: color 0.3s;
+}
+
+.landing-page-root .nav-link:hover {
+  color: #fff;
+}
+
+/* Technical Bracket Effect on Hover */
+.landing-page-root .nav-link::before,
+.landing-page-root .nav-link::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-color: var(--accent-primary);
+  border-style: solid;
+  opacity: 0;
+  transition: all 0.2s;
+  transform: translateY(-50%);
+}
+
+.landing-page-root .nav-link::before {
+  left: -12px;
+  border-width: 1px 0 0 1px; /* Top-Left bracket */
+}
+.landing-page-root .nav-link::after {
+  right: -12px;
+  border-width: 0 1px 1px 0; /* Bottom-Right bracket */
+}
+
+.landing-page-root .nav-link:hover::before,
+.landing-page-root .nav-link:hover::after {
+  opacity: 1;
+  left: -8px;
+  right: -8px;
+}
+
+/* --- RIGHT: AUTH --- */
+.landing-page-root .nav-right {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.landing-page-root .nav-link-auth {
+  background: none;
+  border: none;
+  font-family: "Inter", sans-serif;
+  font-size: 0.85rem;
+  color: #fff;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+.landing-page-root .nav-link-auth:hover {
+  opacity: 1;
+}
+
+/* Sharp Button Style */
+.landing-page-root .btn-sharp {
+  background: #fff;
+  color: #000;
+  border: none;
+  border-radius: 0px; /* Sharp corners */
+  padding: 0.6rem 1.5rem;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+  overflow: hidden;
+}
+
+/* Hover effect for button: Invert colors */
+.landing-page-root .btn-sharp:hover {
+  background: var(--accent-primary);
+  color: #fff;
+  box-shadow: 0 0 20px rgba(112, 0, 255, 0.4);
+}
+
+/* User Block (Logged in) */
+.landing-page-root .user-block {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0.4rem 0.8rem;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.landing-page-root .user-text {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #fff;
+}
+
+.landing-page-root .logout-icon {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+.landing-page-root .logout-icon:hover {
+  color: #ff6b6b;
+}
+
+/* Mobile Tweaks */
+@media (max-width: 768px) {
+  .landing-page-root .tech-nav {
+    padding: 0 1.5rem;
+    height: 60px;
+    background: rgba(5, 5, 7, 0.9); /* Always dark on mobile */
+  }
+  .landing-page-root .nav-center {
+    display: none;
+  }
+}
+
 /* --- NAV & HERO --- */
 .landing-page-root nav {
   position: fixed;

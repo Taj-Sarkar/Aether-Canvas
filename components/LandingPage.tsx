@@ -20,6 +20,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({ user, onNavigate, onLo
   const workflowRef = useRef<HTMLElement>(null);
   const intelligenceSectionRef = useRef<HTMLElement>(null);
   const stickyWrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // --- NAV SCROLL LISTENER ---
+    const handleNavScroll = () => {
+      const nav = document.getElementById('main-nav');
+      if (window.scrollY > 50) {
+        nav?.classList.add('scrolled');
+      } else {
+        nav?.classList.remove('scrolled');
+      }
+    };
+    window.addEventListener('scroll', handleNavScroll);
+    return () => window.removeEventListener('scroll', handleNavScroll);
+  }, []);
   
   useEffect(() => {
     // --- 1. LOADER ---
@@ -227,115 +241,43 @@ export const LandingPage: React.FC<LandingPageProps> = ({ user, onNavigate, onLo
         <div className="curtain-text" id="curtainText" ref={curtainTextRef}>Section Name</div>
         </div>
 
-        <nav>
-        <a href="#" className="nav-logo">AETHER</a>
-        <div className="nav-links">
-            <a className="nav-item" onClick={(e) => handleNavClick(e, 'intelligence')}>Intelligence</a>
-            <a className="nav-item" onClick={(e) => handleNavClick(e, 'workflow')}>Workflow</a>
-            <a className="nav-item" onClick={(e) => handleNavClick(e, 'vision')}>Vision</a>
+        <nav id="main-nav" className="tech-nav">
+        <div className="nav-left">
+          <a href="#" className="nav-logo">
+            <span className="logo-symbol">❖</span> AETHER
+          </a>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+
+        <div className="nav-center">
+          <a className="nav-link" onClick={(e) => handleNavClick(e, 'intelligence')}>
+            Intelligence
+          </a>
+          <a className="nav-link" onClick={(e) => handleNavClick(e, 'workflow')}>
+            Workflow
+          </a>
+          <a className="nav-link" onClick={(e) => handleNavClick(e, 'vision')}>
+            Vision
+          </a>
+        </div>
+
+        <div className="nav-right">
           {user ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div style={{ 
-                fontSize: '0.9rem', 
-                color: 'var(--text-main)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}>
-                <div style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #7000ff 0%, #00dbde 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  fontSize: '0.75rem',
-                  fontWeight: 600
-                }}>
-                  {user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
-                </div>
-                <span>{user.name}</span>
-              </div>
-              <button 
-                onClick={onLogout}
-                style={{
-                  padding: '0.5rem 1rem',
-                  background: 'rgba(255, 107, 107, 0.1)',
-                  border: '1px solid rgba(255, 107, 107, 0.3)',
-                  borderRadius: '8px',
-                  color: '#ff6b6b',
-                  fontSize: '0.85rem',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 107, 107, 0.2)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 107, 107, 0.1)';
-                }}
-              >
-                Logout
-              </button>
+            <div className="user-block">
+              <span className="user-text">{user.name}</span>
+              <button onClick={onLogout} className="logout-icon">✕</button>
             </div>
           ) : (
             <>
-              <button 
-                onClick={() => onNavigate('signin')}
-                style={{
-                  padding: '0.5rem 1rem',
-                  background: 'transparent',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: '8px',
-                  color: 'var(--text-main)',
-                  fontSize: '0.85rem',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--accent-primary)';
-                  e.currentTarget.style.background = 'rgba(112, 0, 255, 0.1)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-                  e.currentTarget.style.background = 'transparent';
-                }}
-              >
-                Sign In
+              <button onClick={() => onNavigate('signin')} className="nav-link-auth">
+                Login
               </button>
-              <button 
-                onClick={() => onNavigate('signup')}
-                style={{
-                  padding: '0.5rem 1rem',
-                  background: 'linear-gradient(135deg, #7000ff 0%, #00dbde 100%)',
-                  border: 'none',
-                  borderRadius: '8px',
-                  color: 'white',
-                  fontSize: '0.85rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  boxShadow: '0 4px 12px rgba(112, 0, 255, 0.3)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(112, 0, 255, 0.4)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(112, 0, 255, 0.3)';
-                }}
-              >
-                Sign Up
+              <button onClick={() => onNavigate('signup')} className="btn-sharp">
+                Start Access
               </button>
             </>
           )}
         </div>
-        </nav>
+      </nav>
 
         <section className="hero" id="home">
         <div className="hero-badge">AI-Native Note Taking</div>
