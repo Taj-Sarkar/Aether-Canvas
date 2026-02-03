@@ -611,7 +611,7 @@
 
 .send-btn svg {
   /* Optical alignment for the Send icon */
-  transform: translateX(-8px) translateY(1px);
+  transform: translateX(0) translateY(1px);
 }
 
 
