@@ -3,6 +3,7 @@ import React, { useState, useEffect, type ChangeEvent } from 'react';
 import { Icons } from './ui/Icons';
 import './AppShell.css';
 import { ProfileModal } from './ProfileModal';
+import { SettingsModal } from './SettingsModal';
 import { 
   AgentState, AgentType, AgentStatus, 
   CanvasBlock, BlockType, TextBlock, ImageBlock, DatasetBlock, 
@@ -73,6 +74,7 @@ export const AppShell = ({ user, onLogout }: AppShellProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingFlashcards, setIsGeneratingFlashcards] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [userProfile, setUserProfile] = useState({
     name: user.name,
     email: user.email,
@@ -851,6 +853,27 @@ Return raw code only.`;
                     display: 'flex',
                     alignItems: 'center',
                     gap: '10px',
+                    color: 'var(--app-text-main)',
+                    transition: 'background 0.2s',
+                    fontSize: '0.9rem'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                  onClick={() => { setUserMenuOpen(false); setIsSettingsOpen(true); }}
+                >
+                  <Icons.Settings size={16} />
+                  <span>Settings</span>
+                </div>
+
+                <div 
+                  className="menu-item"
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
                     color: '#ff6b6b',
                     transition: 'background 0.2s',
                     fontSize: '0.9rem',
@@ -1378,6 +1401,11 @@ Return raw code only.`;
           avatar: userProfile.avatar
         }}
         onUpdateUser={handleUpdateProfile}
+      />
+      
+      <SettingsModal 
+        isOpen={isSettingsOpen} 
+        onClose={() => setIsSettingsOpen(false)}
       />
     </div>
   );

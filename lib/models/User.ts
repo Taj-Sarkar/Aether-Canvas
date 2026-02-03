@@ -8,6 +8,7 @@ export interface IUser {
   bio?: string;
   banner?: string;
   avatar?: string;
+  apiKey?: string; // Encrypted API key
   createdAt: Date;
 }
 
@@ -37,6 +38,10 @@ const UserSchema = new Schema<IUser>({
     default: '',
   },
   avatar: {
+    type: String,
+    default: '',
+  },
+  apiKey: {
     type: String,
     default: '',
   },

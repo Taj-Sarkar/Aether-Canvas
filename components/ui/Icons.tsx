@@ -37,7 +37,8 @@ import {
   X,
   Camera,
   Check,
-  Edit2
+  Edit2,
+  Settings
 } from 'lucide-react';
 
 export const Icons = {
@@ -78,5 +79,6 @@ export const Icons = {
   X,
   Camera,
   Check,
-  Edit: Edit2
+  Edit: Edit2,
+  Settings
 };

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { GoogleGenAI, Type } from "@google/genai";
-import { getDb } from "@/lib/mongodb";
 
 const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
 
@@ -25,7 +24,6 @@ export async function POST(request: Request) {
     }
     
     const ai = ensureClient();
-    const db = await getDb();
 
     switch (action) {
       case "analyzeText": {
@@ -50,15 +48,6 @@ export async function POST(request: Request) {
         });
         const result = JSON.parse(cleanText(response.text || "{}"));
 
-        if (db) {
-          db.collection("gemini_logs").insertOne({
-            action: "analyzeText",
-            createdAt: new Date(),
-            inputLength: (payload?.text || "").length,
-            output: result,
-          }).catch(() => {});
-        }
-
         return NextResponse.json(result);
       }
 
@@ -73,16 +62,6 @@ export async function POST(request: Request) {
           },
         });
         const text = response.text || "No analysis generated.";
-
-        if (db) {
-          db.collection("gemini_logs").insertOne({
-            action: "analyzeImage",
-            createdAt: new Date(),
-            mimeType: payload?.mimeType,
-            prompt: payload?.prompt,
-            output: text,
-          }).catch(() => {});
-        }
 
         return NextResponse.json({ text });
       }
@@ -119,15 +98,6 @@ export async function POST(request: Request) {
           },
         });
         const result = JSON.parse(cleanText(response.text || "{}"));
-
-        if (db) {
-          db.collection("gemini_logs").insertOne({
-            action: "chartRecommendation",
-            createdAt: new Date(),
-            description: payload?.datasetDescription,
-            output: result,
-          }).catch(() => {});
-        }
 
         return NextResponse.json(result);
       }
@@ -207,16 +177,6 @@ IMPORTANT: Use workspace context when relevant, but always answer the user's que
 
           const response = await chat.sendMessage({ message: payload?.newMessage || "" });
           const text = response.text;
-
-          if (db) {
-            db.collection("chat_logs").insertOne({
-              createdAt: new Date(),
-              context: payload?.context,
-              history: payload?.history,
-              userMessage: payload?.newMessage,
-              modelResponse: text,
-            }).catch(() => {});
-          }
 
           return NextResponse.json({ text });
         } catch (chatError: any) {
