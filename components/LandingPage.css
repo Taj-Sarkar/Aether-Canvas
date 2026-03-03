@@ -18,8 +18,9 @@
   background: radial-gradient(circle at 50% 30%, #1a1a2e 0%, #000 100%);
   color: var(--text-main);
   font-family: "Inter", sans-serif;
-  overflow-x: clip;
-  overflow-y: visible;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
   position: relative;
@@ -411,12 +412,17 @@
     padding: 0 1.2rem;
     height: 60px;
     background: rgba(5, 5, 7, 0.9); /* Always dark on mobile */
+    grid-template-columns: auto 1fr auto; /* Allow flexible spacing */
+  }
+  .landing-page-root .nav-left {
+    justify-self: start;
   }
   .landing-page-root .nav-center {
     display: none;
   }
   .landing-page-root .nav-right {
     gap: 0.8rem;
+    justify-self: end;
   }
   .landing-page-root .nav-link-auth {
     display: none; /* hide secondary auth link, keep CTA */

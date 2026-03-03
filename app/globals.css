@@ -7,10 +7,14 @@
 html, body {
   margin: 0;
   padding: 0;
-  overflow: hidden; /* prevent any scrollbar from appearing outside the app */
+  background: #050507; /* matches --app-bg-color so no white flash */
+}
+
+/* Only apply overflow hidden when AppShell is active */
+body:has(.app-shell-root) {
+  overflow: hidden;
   height: 100vh;
   height: 100dvh;
-  background: #050507; /* matches --app-bg-color so no white flash */
 }
 
 img, video {
