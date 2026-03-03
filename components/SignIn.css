@@ -63,6 +63,7 @@
   margin-top: 30vh;
   background: linear-gradient(to right, #fff, #888);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -271,5 +272,24 @@
   .auth-form-side {
     width: 100%;
     max-width: 100%;
+    padding: 3rem 2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-form-side {
+    padding: 2rem 1.5rem;
+  }
+  .auth-title {
+    font-size: 1.6rem;
+  }
+  .auth-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  .auth-button {
+    padding: 0.9rem;
+    font-size: 0.9rem;
   }
 }

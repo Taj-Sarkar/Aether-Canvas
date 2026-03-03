@@ -1,3 +1,23 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* prevent any scrollbar from appearing outside the app */
+  height: 100vh;
+  height: 100dvh;
+  background: #050507; /* matches --app-bg-color so no white flash */
+}
+
+img, video {
+  max-width: 100%;
+  height: auto;
+}
+
 body {
   font-family: 'Inter', sans-serif;
 }
@@ -7,4 +27,5 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
 

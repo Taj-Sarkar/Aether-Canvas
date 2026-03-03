@@ -16,7 +16,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           rel="stylesheet"
         />
       </head>
-      <body className="bg-slate-50 text-slate-900">
+      <body>
         <Script src="https://cdn.tailwindcss.com" strategy="beforeInteractive" />
         {children}
       </body>
