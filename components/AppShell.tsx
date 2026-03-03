@@ -175,6 +175,31 @@ export const AppShell = ({ user, onLogout }: AppShellProps) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAIPanelOpen, setIsAIPanelOpen] = useState(false);
 
+  // Close menus when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setWorkspaceMenuId(null);
+      setBlockMenuId(null);
+    };
+    if (workspaceMenuId || blockMenuId) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [workspaceMenuId, blockMenuId]);
+
+  // Custom dialog state (replaces window.prompt / window.confirm / alert)
+  type DialogMode = 'create-ws' | 'rename-ws' | 'delete-ws' | 'delete-block' | null;
+  const [dialog, setDialog] = useState<{
+    mode: DialogMode;
+    targetId: string | null;
+    inputValue: string;
+    error: string;
+    loading: boolean;
+  }>({ mode: null, targetId: null, inputValue: '', error: '', loading: false });
+
+  const closeDialog = () =>
+    setDialog({ mode: null, targetId: null, inputValue: '', error: '', loading: false });
+
   // Agent States
   const [agents, setAgents] = useState<Record<string, AgentState>>({
     [AgentType.VISION]: { type: AgentType.VISION, status: AgentStatus.IDLE },
@@ -334,77 +359,65 @@ export const AppShell = ({ user, onLogout }: AppShellProps) => {
     }));
   };
 
-  const handleCreateWorkspace = async () => {
-    const name = window.prompt("Workspace name?");
-    if (!name || !name.trim()) return;
-
-    try {
-      const { createWorkspace } = await import("../services/workspaceService");
-      const newWorkspace = await createWorkspace(name.trim());
-      setWorkspaces((prev) => [
-        ...prev,
-        {
-          id: newWorkspace.id,
-          name: newWorkspace.name,
-          icon: newWorkspace.icon,
-          lastActive: newWorkspace.lastActive,
-        },
-      ]);
-      setWorkspaceData((prev) => ({
-        ...prev,
-        [newWorkspace.id]: {
-          blocks: newWorkspace.blocks,
-          chatHistory: newWorkspace.chatHistory,
-          breakdown: newWorkspace.breakdown,
-          visualizations: newWorkspace.visualizations,
-          flashcards: newWorkspace.flashcards,
-        },
-      }));
-      setActiveWorkspaceId(newWorkspace.id);
-    } catch (error) {
-      console.error("Failed to create workspace:", error);
-      alert("Failed to create workspace. Please try again.");
-    }
+  const handleCreateWorkspace = () => {
+    setDialog({ mode: 'create-ws', targetId: null, inputValue: '', error: '', loading: false });
   };
 
-  const handleRenameWorkspace = async (id: string) => {
+  const handleRenameWorkspace = (id: string) => {
     const ws = workspaces.find((w) => w.id === id);
     if (!ws) return;
-    const name = window.prompt("Rename workspace", ws.name);
-    if (name === null || !name.trim()) return;
-
-    try {
-      const { updateWorkspace } = await import("../services/workspaceService");
-      await updateWorkspace(id, { name: name.trim() });
-      setWorkspaces((prev) =>
-        prev.map((w) => (w.id === id ? { ...w, name: name.trim() } : w)),
-      );
-    } catch (error) {
-      console.error("Failed to rename workspace:", error);
-      alert("Failed to rename workspace. Please try again.");
-    }
+    setDialog({ mode: 'rename-ws', targetId: id, inputValue: ws.name, error: '', loading: false });
   };
 
-  const handleDeleteWorkspace = async (id: string) => {
-    const ws = workspaces.find((w) => w.id === id);
-    if (!ws) return;
+  const handleDeleteWorkspace = (id: string) => {
     if (workspaces.length <= 1) {
-      alert("Keep at least one workspace.");
+      setDialog({ mode: null, targetId: null, inputValue: '', error: 'Keep at least one workspace.', loading: false });
       return;
     }
-    if (!window.confirm(`Delete workspace "${ws.name}"?`)) return;
+    setDialog({ mode: 'delete-ws', targetId: id, inputValue: '', error: '', loading: false });
+  };
 
+  const commitCreateWorkspace = async () => {
+    const name = dialog.inputValue.trim();
+    if (!name) { setDialog(d => ({ ...d, error: 'Please enter a name.' })); return; }
+    setDialog(d => ({ ...d, loading: true, error: '' }));
     try {
-      const { deleteWorkspace } = await import("../services/workspaceService");
-      await deleteWorkspace(id);
-      const next = workspaces.filter((w) => w.id !== id);
+      const { createWorkspace } = await import('../services/workspaceService');
+      const newWorkspace = await createWorkspace(name);
+      setWorkspaces(prev => [...prev, { id: newWorkspace.id, name: newWorkspace.name, icon: newWorkspace.icon, lastActive: newWorkspace.lastActive }]);
+      setWorkspaceData(prev => ({ ...prev, [newWorkspace.id]: { blocks: newWorkspace.blocks, chatHistory: newWorkspace.chatHistory, breakdown: newWorkspace.breakdown, visualizations: newWorkspace.visualizations, flashcards: newWorkspace.flashcards } }));
+      setActiveWorkspaceId(newWorkspace.id);
+      closeDialog();
+    } catch (err) {
+      setDialog(d => ({ ...d, loading: false, error: 'Failed to create. Please try again.' }));
+    }
+  };
+
+  const commitRenameWorkspace = async () => {
+    const name = dialog.inputValue.trim();
+    if (!name) { setDialog(d => ({ ...d, error: 'Please enter a name.' })); return; }
+    setDialog(d => ({ ...d, loading: true, error: '' }));
+    try {
+      const { updateWorkspace } = await import('../services/workspaceService');
+      await updateWorkspace(dialog.targetId!, { name });
+      setWorkspaces(prev => prev.map(w => w.id === dialog.targetId ? { ...w, name } : w));
+      closeDialog();
+    } catch (err) {
+      setDialog(d => ({ ...d, loading: false, error: 'Failed to rename. Please try again.' }));
+    }
+  };
+
+  const commitDeleteWorkspace = async () => {
+    setDialog(d => ({ ...d, loading: true, error: '' }));
+    try {
+      const { deleteWorkspace } = await import('../services/workspaceService');
+      await deleteWorkspace(dialog.targetId!);
+      const next = workspaces.filter(w => w.id !== dialog.targetId);
       setWorkspaces(next);
-      if (activeWorkspaceId === id) {
-        setActiveWorkspaceId(next[0]?.id || "");
-      }
-    } catch (error) {
-      console.error("Failed to delete workspace:", error);
-      alert("Failed to delete workspace. Please try again.");
+      if (activeWorkspaceId === dialog.targetId) setActiveWorkspaceId(next[0]?.id || '');
+      closeDialog();
+    } catch (err) {
+      setDialog(d => ({ ...d, loading: false, error: 'Failed to delete. Please try again.' }));
     }
   };
 
@@ -440,10 +453,16 @@ export const AppShell = ({ user, onLogout }: AppShellProps) => {
   };
 
   const handleDeleteBlock = (id: string) => {
+    setDialog({ mode: 'delete-block', targetId: id, inputValue: '', error: '', loading: false });
+  };
+
+  const commitDeleteBlock = () => {
+    if (!dialog.targetId) return;
     setWorkspaceSlice((data) => ({
       ...data,
-      blocks: data.blocks.filter((b) => b.id !== id),
+      blocks: data.blocks.filter((b) => b.id !== dialog.targetId),
     }));
+    closeDialog();
   };
 
   const handleSaveLastResponseToNote = () => {
@@ -963,43 +982,21 @@ Return raw code only.`;
                   >
                     <Icons.MoreHorizontal size={14} />
                     {workspaceMenuId === ws.id && (
-                      <div
-                        style={{
-                          position: "absolute",
-                          right: 0,
-                          marginTop: "4px",
-                          width: "120px",
-                          background: "var(--app-panel-bg)",
-                          border: "1px solid var(--app-panel-border)",
-                          borderRadius: "8px",
-                          overflow: "hidden",
-                          zIndex: 20,
-                        }}
-                      >
+                      <div className="workspace-menu" onClick={(e) => e.stopPropagation()}>
                         <div
+                          className="workspace-menu-item"
                           onClick={() => {
                             setWorkspaceMenuId(null);
                             handleRenameWorkspace(ws.id);
-                          }}
-                          style={{
-                            padding: "8px 12px",
-                            fontSize: "0.85rem",
-                            cursor: "pointer",
-                            color: "var(--app-text-main)",
                           }}
                         >
                           Rename
                         </div>
                         <div
+                          className="workspace-menu-item danger"
                           onClick={() => {
                             setWorkspaceMenuId(null);
                             handleDeleteWorkspace(ws.id);
-                          }}
-                          style={{
-                            padding: "8px 12px",
-                            fontSize: "0.85rem",
-                            cursor: "pointer",
-                            color: "#ff6b6b",
                           }}
                         >
                           Delete
@@ -1288,39 +1285,20 @@ Return raw code only.`;
                       cursor: "pointer",
                       position: "relative",
                     }}
-                    onClick={() =>
-                      setBlockMenuId(blockMenuId === block.id ? null : block.id)
-                    }
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setBlockMenuId(blockMenuId === block.id ? null : block.id);
+                    }}
                   >
                     <Icons.MoreHorizontal size={16} />
                     {blockMenuId === block.id && (
-                      <div
-                        style={{
-                          position: "absolute",
-                          right: 0,
-                          marginTop: "4px",
-                          width: "100px",
-                          background: "var(--app-panel-bg)",
-                          border: "1px solid var(--app-panel-border)",
-                          borderRadius: "8px",
-                          overflow: "hidden",
-                          zIndex: 20,
-                        }}
-                      >
+                      <div className="block-menu" onClick={(e) => e.stopPropagation()}>
                         <div
+                          className="block-menu-item danger"
                           onClick={(e) => {
                             e.stopPropagation();
                             setBlockMenuId(null);
                             handleDeleteBlock(block.id);
-                          }}
-                          style={{
-                            padding: "8px 12px",
-                            fontSize: "0.85rem",
-                            cursor: "pointer",
-                            color: "#ff6b6b",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "6px",
                           }}
                         >
                           <Icons.Trash size={14} /> Delete
@@ -2315,6 +2293,93 @@ Return raw code only.`;
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
       />
+
+      {/* ── Custom workspace / note dialog ── */}
+      {dialog.mode && (
+        <div className="ws-dialog-overlay" onClick={closeDialog}>
+          <div className="ws-dialog" onClick={e => e.stopPropagation()}>
+
+            {/* CREATE / RENAME */}
+            {(dialog.mode === 'create-ws' || dialog.mode === 'rename-ws') && (
+              <>
+                <div className="ws-dialog-header">
+                  <Icons.Layers size={18} />
+                  <h3>{dialog.mode === 'create-ws' ? 'New Workspace' : 'Rename Workspace'}</h3>
+                </div>
+                <p className="ws-dialog-sub">
+                  {dialog.mode === 'create-ws'
+                    ? 'Give your workspace a name to get started.'
+                    : 'Enter a new name for this workspace.'}
+                </p>
+                <input
+                  className="ws-dialog-input"
+                  autoFocus
+                  placeholder="e.g. Research, Projects…"
+                  value={dialog.inputValue}
+                  onChange={e => setDialog(d => ({ ...d, inputValue: e.target.value }))}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') dialog.mode === 'create-ws' ? commitCreateWorkspace() : commitRenameWorkspace();
+                    if (e.key === 'Escape') closeDialog();
+                  }}
+                />
+                {dialog.error && <p className="ws-dialog-error">{dialog.error}</p>}
+                <div className="ws-dialog-actions">
+                  <button className="ws-dialog-btn ws-dialog-btn-ghost" onClick={closeDialog} disabled={dialog.loading}>Cancel</button>
+                  <button
+                    className="ws-dialog-btn ws-dialog-btn-primary"
+                    onClick={dialog.mode === 'create-ws' ? commitCreateWorkspace : commitRenameWorkspace}
+                    disabled={dialog.loading || !dialog.inputValue.trim()}
+                  >
+                    {dialog.loading ? <span className="ws-dialog-spinner" /> : (dialog.mode === 'create-ws' ? 'Create' : 'Rename')}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* DELETE WORKSPACE */}
+            {dialog.mode === 'delete-ws' && (() => {
+              const ws = workspaces.find(w => w.id === dialog.targetId);
+              return (
+                <>
+                  <div className="ws-dialog-header ws-dialog-header-danger">
+                    <Icons.Trash size={18} />
+                    <h3>Delete Workspace</h3>
+                  </div>
+                  <p className="ws-dialog-sub">
+                    Are you sure you want to delete <strong>&ldquo;{ws?.name}&rdquo;</strong>?
+                    This will permanently remove all notes and data inside it.
+                  </p>
+                  {dialog.error && <p className="ws-dialog-error">{dialog.error}</p>}
+                  <div className="ws-dialog-actions">
+                    <button className="ws-dialog-btn ws-dialog-btn-ghost" onClick={closeDialog} disabled={dialog.loading}>Cancel</button>
+                    <button className="ws-dialog-btn ws-dialog-btn-danger" onClick={commitDeleteWorkspace} disabled={dialog.loading}>
+                      {dialog.loading ? <span className="ws-dialog-spinner" /> : 'Delete'}
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
+
+            {/* DELETE NOTE / BLOCK */}
+            {dialog.mode === 'delete-block' && (
+              <>
+                <div className="ws-dialog-header ws-dialog-header-danger">
+                  <Icons.Trash size={18} />
+                  <h3>Delete Note</h3>
+                </div>
+                <p className="ws-dialog-sub">
+                  Are you sure you want to delete this note? This action cannot be undone.
+                </p>
+                <div className="ws-dialog-actions">
+                  <button className="ws-dialog-btn ws-dialog-btn-ghost" onClick={closeDialog}>Cancel</button>
+                  <button className="ws-dialog-btn ws-dialog-btn-danger" onClick={commitDeleteBlock}>Delete</button>
+                </div>
+              </>
+            )}
+
+          </div>
+        </div>
+      )}
     </div>
   );
 };
