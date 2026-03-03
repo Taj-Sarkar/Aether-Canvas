@@ -640,10 +640,22 @@ export const AppShell = ({ user, onLogout }: AppShellProps) => {
       }));
     } catch (e: any) {
       console.error("Chat error:", e);
+      const raw = (e?.message || "").toLowerCase();
+      const isQuota =
+        raw.includes("429") ||
+        raw.includes("resource_exhausted") ||
+        raw.includes("quota") ||
+        raw.includes("rate limit") ||
+        raw.includes("too many requests");
+
+      const friendlyContent = isQuota
+        ? "⚠️ **API quota reached.** Your Gemini API key has hit its rate limit. Please update your API key in **Settings** to continue."
+        : "⚠️ Couldn't get a response right now. Please try again in a moment.";
+
       const errorMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: "model",
-        content: `**Error:** ${e?.message || "Failed to get response. Please check if GEMINI_API_KEY is set in your .env file."}`,
+        content: friendlyContent,
         timestamp: Date.now(),
       };
       setWorkspaceSlice((data) => ({

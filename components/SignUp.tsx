@@ -18,6 +18,21 @@ export const SignUp: React.FC<SignUpProps> = ({ onNavigate, onSignUpSuccess }) =
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const sanitizeError = (msg: string): string => {
+    const m = msg.toLowerCase();
+    if (m.includes('already') || m.includes('exists') || m.includes('duplicate') || m.includes('taken'))
+      return 'That email is already registered. Try signing in.';
+    if (m.includes('invalid email') || m.includes('email format'))
+      return 'Please enter a valid email address.';
+    if (m.includes('password') && m.includes('short'))
+      return 'Password must be at least 6 characters.';
+    if (m.includes('network') || m.includes('fetch') || m.includes('failed to fetch'))
+      return 'Connection error. Check your internet and try again.';
+    if (m.includes('too many') || m.includes('rate limit') || m.includes('429'))
+      return 'Too many attempts. Please wait a moment.';
+    return msg.length > 80 ? msg.slice(0, 77) + '…' : msg;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -40,10 +55,10 @@ export const SignUp: React.FC<SignUpProps> = ({ onNavigate, onSignUpSuccess }) =
       if (result.success && result.user) {
         onSignUpSuccess(result.user);
       } else {
-        setError(result.error || 'Registration failed');
+        setError(sanitizeError(result.error || 'Registration failed'));
       }
     } catch (err: any) {
-      setError(err.message || 'System error occurred');
+      setError(sanitizeError(err.message || 'System error occurred'));
     } finally {
       setLoading(false);
     }

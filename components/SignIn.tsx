@@ -16,6 +16,20 @@ export const SignIn: React.FC<SignInProps> = ({ onNavigate, onSignInSuccess }) =
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const sanitizeError = (msg: string): string => {
+    const m = msg.toLowerCase();
+    if (m.includes('invalid') || m.includes('incorrect') || m.includes('wrong') || m.includes('password'))
+      return 'Incorrect email or password.';
+    if (m.includes('not found') || m.includes('no user') || m.includes('does not exist'))
+      return 'Account not found. Please sign up first.';
+    if (m.includes('network') || m.includes('fetch') || m.includes('failed to fetch'))
+      return 'Connection error. Check your internet and try again.';
+    if (m.includes('too many') || m.includes('rate limit') || m.includes('429'))
+      return 'Too many attempts. Please wait a moment.';
+    // Truncate any other raw message at 80 chars
+    return msg.length > 80 ? msg.slice(0, 77) + '…' : msg;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -28,10 +42,10 @@ export const SignIn: React.FC<SignInProps> = ({ onNavigate, onSignInSuccess }) =
       if (result.success && result.user) {
         onSignInSuccess(result.user);
       } else {
-        setError(result.error || 'Failed to sign in');
+        setError(sanitizeError(result.error || 'Failed to sign in'));
       }
     } catch (err: any) {
-      setError(err.message || 'An error occurred');
+      setError(sanitizeError(err.message || 'An error occurred'));
     } finally {
       setLoading(false);
     }
